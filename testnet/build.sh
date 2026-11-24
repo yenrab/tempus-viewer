@@ -8,14 +8,14 @@
 #   SILICA_COMMIT     the release commit (default e53689ec96c92699fc996a006762d40fcc288680, tag compiler-<that>)
 #   BEES_ROOT         the clone of https://github.com/Silica-Language-and-Compiler/project-bees (cloned here when absent)
 #   OPENSSL_PREFIX    OpenSSL 4.1 or later (BEES finds /opt/homebrew/opt/openssl by itself)
-#   NAMES             the published names the nodes serve (default home)
 set -eu
+t0=$(date +%s)
 here=$(cd "$(dirname "$0")" && pwd)
 : "${SILICA_COMPILER:?set SILICA_COMPILER to the release compiler binary}"
 : "${SILICA_ROOT:?set SILICA_ROOT to the clone of the Silica repository (a path that does not exist yet is cloned)}"
 : "${SILICA_COMMIT:=e53689ec96c92699fc996a006762d40fcc288680}"
 : "${BEES_ROOT:?set BEES_ROOT to the clone of project-bees (a path that does not exist yet is cloned)}"
-export SILICA_ROOT BEES_ROOT NAMES="${NAMES:-home}"
+export SILICA_ROOT BEES_ROOT
 [ -x "$SILICA_COMPILER" ] || { echo "no compiler at $SILICA_COMPILER"; exit 2; }
 if [ ! -d "$SILICA_ROOT/.git" ]; then
     git clone -q https://github.com/Silica-Language-and-Compiler/silica "$SILICA_ROOT"
@@ -41,9 +41,10 @@ rm -f "$BEES_ROOT/native/dangerous_exposure_source/lib/libsilica_sockets.a" "$BE
 make -C "$BEES_ROOT/native" all
 python3 "$BEES_ROOT/tools/bees_tempus_certs.py" check
 make -C "$BEES_ROOT" check-compiler SILICA_COMPILER="$SILICA_COMPILER" || true
-for leaf in content bridge replycheck; do
+for leaf in content data authority bridge replycheck; do
     make -C "$here/nodes/$leaf" clean-generated SILICA_COMPILER="$SILICA_COMPILER"
     start=$(date +%s)
     make -C "$here/nodes/$leaf" build SILICA_COMPILER="$SILICA_COMPILER"
     echo "[build.sh] $leaf: $(( $(date +%s) - start )) s"
 done
+echo "[build.sh] total: $(( $(date +%s) - t0 )) s"

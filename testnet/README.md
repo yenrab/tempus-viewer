@@ -7,7 +7,8 @@ the keys and passes are BEES's test-only ones.
 
 Status (2026-11-24): the data and the reference replies exist and are checked. The first slice runs: a client calls
 `viewer:home/0` through the bridge, the bridge routes it to the content node, and the decoded result equals
-`data/out/replies/home.etf` (the reference bytes appear verbatim in the result frame). Only `home` is built so far.
+`data/out/replies/home.etf` (the reference bytes appear verbatim in the result frame). Stage 2 followed: all 20 published names and every page are served through the bridge from three TRUST nodes and
+checked against the reference bytes (`testnet/run_all.sh`: 93 checks, all pass).
 
 ## What exists
 
@@ -71,6 +72,33 @@ Found on the way: a TRUST frame is refused (`unknown_atom`) if it carries an ato
 so `true` and `false` must be in it (the generator adds them); and BEES's Python client cannot decode the tuples of a
 reply, so the script reads the raw frame bytes (OI-19).
 
+## Stage 2: all names, three TRUST nodes, the mark query
+
+    testnet/build.sh        (same environment as for the first slice)
+    testnet/run_all.sh
+
+| Node | TRUST port | Serves |
+|---|---|---|
+| `content` | 24400 | home, status, directory, docs_intro, docs_commands, gallery, image_part |
+| `data` | 24410 | nodes, nodes_summary, nodes_table, node, events (20 pages), samples (frame and 20 pages), search, search_results, live, clock, slow, fail, empty |
+| `authority` | 24420 | `mark_of`, `restart_node` |
+| `bridge` | TEMPUS 24401 | every `viewer:` name, routed onward; its own TRUST side is configured on 24406 and nothing listens |
+
+`run_all.sh` calls every name and every page through the bridge and compares the decoded value and the verbatim bytes with
+`data/out/replies`; asks `viewer:mark` for all 20 names and compares with `index.json`; and checks that `fail` and a
+refusal look the same to the client, that `slow` answers within the window, that an unexported name and a wrong arity
+are refused, and that `image_part` serves the 234 KB photo in two parts.
+
+- **The mark query is a stand-in.** `viewer:mark/1` takes the name and the bridge asks `authority` (`mark_of/1`). The real
+  form is still an open BEES-side question (OI-3).
+- **Images** are embedded as 8192-hex-character chunk literals, because one 468 KB literal did not finish compiling
+  (compile time is roughly quadratic in the size of a single literal and linear across literals).
+- **`slow`** is a busy loop (Silica has no sleep a worker can call), so its delay is machine dependent: 1.4 to 1.5 s here.
+- **The largest part of an image** that fits one frame is about 131000 bytes, not 131072.
+- **A field called `bytes` cannot be used** in a Silica record (reserved word, E1069), so the image command's size is `size`.
+- The bridge's per-peer request limit was raised from BEES's 20 an hour to 100000 for the checks; build times are about
+  3.5 minutes in all.
+
 ## Plan for the nodes
 
 Topology (ports are provisional; the bridge's TEMPUS port is the default, 481):
@@ -83,7 +111,7 @@ Topology (ports are provisional; the bridge's TEMPUS port is the default, 481):
 | `authority` | TRUST | decides each name's mark (`look_only` or `does_something`) and runs `restart_node` |
 | `sentinel`, `edge1`, `edge2`, `edge3` | TEMPUS | a gossip network around the bridge, so the viewer talks to a real network |
 
-Steps, each with a trial and a golden as BEES does (step 2 is done for `home`):
+Steps, each with a trial and a golden as BEES does (steps 1 to 3 are done for all 20 names; 4 and 5 remain):
 
 1. Generate Silica for the replies: one typed vocabulary type (a sum of tagged tuples) and one builder per reply, with
    the large tables built from the same seeded generator in Silica (not literals), and a check that a node's reply bytes

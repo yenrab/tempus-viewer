@@ -366,7 +366,8 @@ These were not ruled and must be decided before or during the build.
   shortcut keys, the window layout, and the tests for the Swift C interface.
 - OI-8. SETTLED 2026-11-24: the scheme is `tempus` and is the only link type allowed.
 - OI-9. The total image cap of 5 MB is accepted as a configurable starting value. The size of the part waits for the
-  timing trial.
+  timing trial The test network shows that the largest
+  part that fits one frame is about 131000 bytes, not 131072.
 - OI-10. RULED 2026-11-24: they live in this project (requirement 6.4).
 
 ## 16. Dependencies on other work

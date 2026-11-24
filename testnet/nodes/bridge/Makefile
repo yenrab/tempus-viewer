@@ -6,17 +6,16 @@
 # make BEES_ROOT=... SILICA_ROOT=... SILICA_COMPILER=... build
 LEAF_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 include $(LEAF_DIR)/../common.mk
-NAMES ?= home
 T := $(BEES_ROOT)/tools
 DATA := $(TESTNET)/data
 SRC_T := $(BEES_ROOT)/src/tempus
 USES := --use tempus_ids --use bees_tempus_store --use bees_tempus_store_actor --use bees_tempus_node --use dangerous_bees_tempus_draws --use bees_tempus_bridge --use bees_tempus_test
-_ := $(shell cd "$(LEAF_DIR)" && [ "$$(cat .gen.root 2>/dev/null)" = "$(BEES_ROOT) $(NAMES)" ] || echo "$(BEES_ROOT) $(NAMES)" > .gen.root)
+_ := $(shell cd "$(LEAF_DIR)" && [ "$$(cat .gen.root 2>/dev/null)" = "$(BEES_ROOT)" ] || echo "$(BEES_ROOT)" > .gen.root)
 -include $(LEAF_DIR)/.gen.mk
-$(LEAF_DIR)/.gen.mk: $(LEAF_DIR)/.gen.root bees.config.in trust_servers.config edge.spec bridge.role node.atoms $(DATA)/gen_silica.py $(DATA)/gen.py $(DATA)/vocab.py $(T)/bees_tempus_gen.py $(T)/bees_trust_gen.py $(SRC_T)/bees_tempus_node.silica.in $(SRC_T)/bees_tempus_node.part $(SRC_T)/bees_tempus_bridge.part $(SRC_T)/bees_tempus_link.part $(BEES_ROOT)/src/shim/bees_trust_node.part
+$(LEAF_DIR)/.gen.mk: $(LEAF_DIR)/.gen.root bees.config.in trust_servers.config bridge.role.in $(DATA)/gen_nodes.py $(DATA)/gen_silica.py $(DATA)/gen.py $(DATA)/vocab.py $(T)/bees_tempus_gen.py $(T)/bees_trust_gen.py $(SRC_T)/bees_tempus_node.silica.in $(SRC_T)/bees_tempus_node.part $(SRC_T)/bees_tempus_bridge.part $(SRC_T)/bees_tempus_link.part $(BEES_ROOT)/src/shim/bees_trust_node.part
 	@cd "$(LEAF_DIR)" && $(LINKS) && $(LINKS_TEMPUS) && cd "$(LEAF_DIR)" && \
 	sed 's|@BEES_ROOT@|$(BEES_ROOT)|g' bees.config.in > bees.config && chmod 600 "$(CERTS_TRUST)"/*-key.pem && \
-	python3 "$(DATA)/gen_silica.py" --names $(NAMES) --stub --module bridge_fns --also-atoms-for bees_trust_mfa --out lib && \
+	python3 "$(DATA)/gen_nodes.py" --bridge --out . && \
 	python3 "$(T)/bees_config_trust.py" conf -o lib bees.config && \
 	python3 "$(T)/bees_trust_gen.py" mfa -o lib --config bees.config lib/bridge_fns.trust && \
 	python3 "$(T)/bees_tempus_gen.py" spec edge.spec lib/bees_tempus_spec.silica && \
@@ -30,6 +29,6 @@ PAIRED := $(ENTRIES)
 clean: clean-generated
 .PHONY: clean-generated
 # make expands the names, so only files that exist are named
-GENERATED := $(wildcard $(LEAF_DIR)/lib/* $(LEAF_DIR)/*.sams $(LEAF_DIR)/*.iface $(LEAF_DIR)/*.o $(LEAF_DIR)/.gen.* $(LEAF_DIR)/bees.config $(LEAF_DIR)/dangerous_bridge $(LEAF_DIR)/dangerous_bridge.silica $(LEAF_DIR)/trust_root.part $(LEAF_DIR)/silica.* $(LEAF_DIR)/dangerous_exposure_source)
+GENERATED := $(wildcard $(LEAF_DIR)/lib/* $(LEAF_DIR)/*.sams $(LEAF_DIR)/*.iface $(LEAF_DIR)/*.o $(LEAF_DIR)/.gen.* $(LEAF_DIR)/bees.config $(LEAF_DIR)/dangerous_bridge $(LEAF_DIR)/dangerous_bridge.silica $(LEAF_DIR)/trust_root.part $(LEAF_DIR)/bridge.role $(LEAF_DIR)/edge.spec $(LEAF_DIR)/.exports.json $(LEAF_DIR)/silica.* $(LEAF_DIR)/dangerous_exposure_source)
 clean-generated:
 	@rm -f $(GENERATED)

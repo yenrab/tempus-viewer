@@ -1,0 +1,24 @@
+%% The testnet's authority node (answers mark_of (the mark of each name) and restart_node): a plain TRUST node over mutual TLS 1.3 on loopback. Its identity is p.pem of BEES's
+%% TEST-ONLY certificates (trials/n4_trust_tls/certs); its whitelist (generated, trust_whitelist.config) names the bridge's TRUST
+%% certificate (b.pem) only. frame_size_max: 131072 (BEES's limit; the c3 trial's 4096 is too small for a reply).
+%% @BEES_ROOT@ is replaced by the Makefile; bees.config is generated and ignored by git.
+[
+  {mode, trust},
+  {node, [{name, "authority@127.0.0.1"}]},
+  {trust, [
+    {port, 24420},
+    {listen_address, "127.0.0.1"},
+    {tls_opts, [{certfile, "@BEES_ROOT@/trials/n4_trust_tls/certs/p.pem"},
+                {keyfile, "@BEES_ROOT@/trials/n4_trust_tls/certs/p-key.pem"}]},
+    {whitelist_file, "trust_whitelist.config"},
+    {whitelist_cert_dir, "@BEES_ROOT@/trials/n4_trust_tls/certs"},
+    {call_timeout_ms, 3000},
+    {first_frame_timeout_ms, 1000},
+    {client_handshake_timeout, 2000},
+    {suspicion_limit, 5},
+    {token_bytes, 48},
+    {token_ttl_sec, 300},
+    {frame_size_max, 131072},
+    {term_depth_max, 32}
+  ]}
+].

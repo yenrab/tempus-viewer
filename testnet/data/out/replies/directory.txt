@@ -7,7 +7,7 @@
     [{link, #{text => <<"events">>, to => <<"tempus://127.0.0.1:481/events?a0=1">>}}],
     [{link, #{text => <<"search">>, to => <<"tempus://127.0.0.1:481/search">>}}],
     [{link, #{text => <<"gallery">>, to => <<"tempus://127.0.0.1:481/gallery">>}}],
-    [{link, #{text => <<"samples">>, to => <<"tempus://127.0.0.1:481/samples?a0=1">>}}],
+    [{link, #{text => <<"samples">>, to => <<"tempus://127.0.0.1:481/samples">>}}],
     [{link, #{text => <<"live">>, to => <<"tempus://127.0.0.1:481/live">>}}],
     [{link, #{text => <<"docs_intro">>, to => <<"tempus://127.0.0.1:481/docs_intro">>}}],
     [{link, #{text => <<"docs_commands">>, to => <<"tempus://127.0.0.1:481/docs_commands">>}}]

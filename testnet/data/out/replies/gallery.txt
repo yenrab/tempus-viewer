@@ -1,7 +1,7 @@
 [
   {vocabulary, #{version => 1}},
   {heading, #{into => <<"main">>, level => 1, text => <<"Gallery">>}},
-  {image, #{into => <<"main">>, id => <<"icon">>, alt => <<"A small blue-green gradient square, the network's icon">>, width => 32, height => 32, bytes => 2017}},
-  {image, #{into => <<"main">>, id => <<"chart">>, alt => <<"A bar chart of load: eight bars of rising height">>, width => 320, height => 200, bytes => 850}},
-  {image, #{into => <<"main">>, id => <<"photo">>, alt => <<"A grey noise field used to test large images">>, width => 400, height => 400, bytes => 234174}}
+  {image, #{into => <<"main">>, id => <<"icon">>, alt => <<"A small blue-green gradient square, the network's icon">>, width => 32, height => 32, size => 2017}},
+  {image, #{into => <<"main">>, id => <<"chart">>, alt => <<"A bar chart of load: eight bars of rising height">>, width => 320, height => 200, size => 850}},
+  {image, #{into => <<"main">>, id => <<"photo">>, alt => <<"A grey noise field used to test large images">>, width => 400, height => 400, size => 234174}}
 ]

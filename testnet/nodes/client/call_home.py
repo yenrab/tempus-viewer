@@ -22,14 +22,14 @@ def client_lib():
     return c
 
 
-def call(addr, name="home", args=(), req_id="home1", clock=1500, skew=10):
-    """one TRUST call through the bridge; returns BEES's Outcome"""
+def call(addr, name="home", args=(), req_id="home1", clock=1500, skew=10, timeout=10.0):
+    """one TRUST call through the bridge (args: byte strings); returns BEES's Outcome"""
     c = client_lib()
     # the c3 trial's Python client: identity "other" (seed 64..95), an edge token valid 1000..3000, the verifier with the
     # test producer's key and the trial's clock 1500 (the bridge's own test clock is the same)
     me = c.fixture_identity(64, "tempus_edge", 1000, 3000, addr="127.0.0.1:24402")
     verifier = c.Verifier(c._raw_public(c.fixture_key(0)), "k1", lambda: clock, skew)
-    return c.dial(addr, me, verifier, c.call_frame(req_id, "viewer", name, list(args)), timeout=10.0)
+    return c.dial(addr, me, verifier, c.call_frame(req_id, "viewer", name, [a.encode() if isinstance(a, str) else a for a in args]), timeout=timeout)
 
 
 def find_value_bytes(body, ref):

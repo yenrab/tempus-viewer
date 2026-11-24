@@ -74,7 +74,7 @@ publish("home", "look_only", [
     v.fetch("status", "status"),
     v.listing("main", [[v.link("Nodes", addr("nodes"))], [v.link("Events", addr("events", "1"))],
                        [v.link("Search", addr("search"))], [v.link("Gallery", addr("gallery"))],
-                       [v.link("Samples", addr("samples", "1"))], [v.link("Live clock", addr("live"))]]),
+                       [v.link("Samples", addr("samples"))], [v.link("Live clock", addr("live"))]]),
 ], "the first screen; one region filled by a second request")
 
 up = sum(1 for n in NODES if n["status"] == "up")
@@ -115,7 +115,7 @@ REPLIES["events"]["pages"] = {str(p): [v.vocabulary()] + event_page(p) for p in 
 publish("directory", "look_only", [
     v.heading("main", 1, "Directory"),
     v.listing("main", [[v.link(n, addr(n, *a))] for n, a in [("home", ()), ("nodes", ()), ("events", ("1",)), ("search", ()),
-                                                            ("gallery", ()), ("samples", ("1",)), ("live", ()), ("docs_intro", ()),
+                                                            ("gallery", ()), ("samples", ()), ("live", ()), ("docs_intro", ()),
                                                             ("docs_commands", ())]], ordered=True)])
 
 def prose(n):
@@ -133,7 +133,7 @@ publish("docs_intro", "look_only", [
     v.preformatted("main", "tempus://" + HOST + "/home"),
 ])
 publish("docs_commands", "look_only", [v.heading("main", 1, "Commands"), v.paragraph("main", "Every command in vocabulary v0:"),
-    v.listing("main", [[v.code(t)] for t in sorted({c[0] for r in REPLIES.values() if r for c in r["commands"]})])])
+    v.listing("main", [[v.code(str(t))] for t in sorted({c[0] for r in REPLIES.values() if r for c in r["commands"]})])])
 
 publish("search", "look_only", [
     v.heading("main", 1, "Search"),
@@ -152,8 +152,8 @@ publish("gallery", "look_only", [
 
 publish("samples", "look_only", [
     v.heading("main", 1, "Samples"), v.region("main", "rows"),
-    v.table("rows", "Samples, rows 1 to 100", ["#", "name", "value", "delta", "time"], SAMPLES[:100]),
-    v.fetch("main", "samples", "2")], "a table of 2000 rows in pages of 100")
+    v.table("rows", "Samples", ["#", "name", "value", "delta", "time"], []),
+    v.fetch("rows", "samples", "1")], "the frame of a 2000-row table: an empty table in a region, filled by pages of 100 rows")
 REPLIES["samples"]["pages"] = {str(p): [v.vocabulary(), v.table_rows("rows", SAMPLES[(p - 1) * 100:p * 100])] for p in range(1, 21)}
 
 publish("live", "look_only", [

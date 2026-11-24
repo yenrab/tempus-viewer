@@ -85,7 +85,7 @@
    "why": "regions nested 33 deep (11)"
   },
   {
-   "bytes": 117,
+   "bytes": 116,
    "name": "image_without_alt",
    "verdict": "refuse_command",
    "why": "an image needs a text description (10.1)"
@@ -159,13 +159,13 @@
    "pages": []
   },
   "directory": {
-   "bytes": 845,
+   "bytes": 840,
    "doc": "",
    "mark": "look_only",
    "pages": []
   },
   "docs_commands": {
-   "bytes": 608,
+   "bytes": 656,
    "doc": "",
    "mark": "look_only",
    "pages": []
@@ -216,13 +216,13 @@
    "pages": []
   },
   "gallery": {
-   "bytes": 501,
+   "bytes": 498,
    "doc": "three images; the large one is above one frame and is fetched in parts by image_part",
    "mark": "look_only",
    "pages": []
   },
   "home": {
-   "bytes": 1170,
+   "bytes": 1165,
    "doc": "the first screen; one region filled by a second request",
    "mark": "look_only",
    "pages": []
@@ -264,8 +264,8 @@
    "pages": []
   },
   "samples": {
-   "bytes": 6240,
-   "doc": "a table of 2000 rows in pages of 100",
+   "bytes": 335,
+   "doc": "the frame of a 2000-row table: an empty table in a region, filled by pages of 100 rows",
    "mark": "look_only",
    "pages": [
     "1",

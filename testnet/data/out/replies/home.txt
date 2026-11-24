@@ -20,7 +20,7 @@
     [{link, #{text => <<"Events">>, to => <<"tempus://127.0.0.1:481/events?a0=1">>}}],
     [{link, #{text => <<"Search">>, to => <<"tempus://127.0.0.1:481/search">>}}],
     [{link, #{text => <<"Gallery">>, to => <<"tempus://127.0.0.1:481/gallery">>}}],
-    [{link, #{text => <<"Samples">>, to => <<"tempus://127.0.0.1:481/samples?a0=1">>}}],
+    [{link, #{text => <<"Samples">>, to => <<"tempus://127.0.0.1:481/samples">>}}],
     [{link, #{text => <<"Live clock">>, to => <<"tempus://127.0.0.1:481/live">>}}]
   ]}}
 ]

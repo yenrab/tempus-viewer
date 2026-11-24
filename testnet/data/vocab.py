@@ -51,7 +51,7 @@ def form(into, name, fields, submit_label, submit_name):
     return cmd("form", into=into, name=name, fields=fields, submit=request(submit_name), label=submit_label)
 
 def image(into, ident, alt, width, height, size):
-    return cmd("image", into=into, id=ident, alt=alt, width=width, height=height, bytes=size)
+    return cmd("image", into=into, id=ident, alt=alt, width=width, height=height, size=size)
 def table(into, caption, columns, rows): return cmd("table", into=into, caption=caption, columns=columns, rows=rows)
 def table_rows(r, rows): return cmd("table_rows", region=r, rows=rows)
 
