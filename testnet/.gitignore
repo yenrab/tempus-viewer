@@ -8,3 +8,26 @@ experiments/etf-commands/wire_etf.silica
 experiments/etf-commands/compile.log
 data/__pycache__/
 experiments/etf-commands/*.derived
+# the slice (nodes/): build products and what the Makefiles generate (sources are the Makefiles, *.role, *.in, *.config, *.spec, *.atoms of node.atoms, run_slice.py)
+.bees_root
+run/
+nodes/__pycache__/
+nodes/*/__pycache__/
+nodes/*/lib/
+nodes/*/dangerous_exposure_source
+nodes/*/*.sams
+nodes/*/*.iface
+nodes/*/*.o
+nodes/*/*.derived
+nodes/*/silica.*
+nodes/*/silica.compile.*
+nodes/*/.gen.*
+nodes/*/.integrate_counts
+nodes/*/bees.config
+nodes/*/trust_root.part
+nodes/*/last_compile.log
+nodes/content/dangerous_content
+nodes/content/dangerous_content.silica
+nodes/bridge/dangerous_bridge
+nodes/bridge/dangerous_bridge.silica
+nodes/replycheck/replycheck

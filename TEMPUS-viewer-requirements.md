@@ -323,6 +323,12 @@ These were not ruled and must be decided before or during the build.
   take byte strings.
 - OI-18. RULED 2026-11-24: accepted (requirement 2.9). The release compiler's binaries do not carry the standard
   library units; their sources are taken from the Silica repository at the release tag's commit.
+- OI-19. FOUND 2026-11-24 by the first test-network slice: every command is a tuple (requirement 6.2), and BEES's example
+  clients cannot decode tuples. The Python client returned `refused ... bad_tag` for a good result frame. The Swift
+  library, which the viewer uses in place (requirement 2.7), has a `Term` type with no tuple case, and its comment at
+  `Frames.swift:270` says a frame with a tuple is refused and its bytes are kept in the `Outcome` (read in the source,
+  not run). The viewer therefore needs the Swift library's ETF reader to decode tuples, which is a fix or extension
+  made in BEES, in place. Until then the viewer can take the raw bytes from the `Outcome` and decode them itself.
 - OI-11. Whether the Silica TCP carrier resolves domain names, or only the Swift host does. Requirement 3.3 puts
   resolution in the Swift host, so this matters only if Silica code ever dials directly.
 - OI-14. RULED 2026-11-24: the latest macOS version only. The build machine's SDK is macOS 26. Older versions are not

@@ -1,0 +1,3 @@
+# the content node's own atoms: the module and function names a peer may send (the replies' own tags and keys are in lib/viewer_replies.atoms)
+viewer
+home

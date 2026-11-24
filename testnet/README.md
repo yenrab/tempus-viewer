@@ -5,7 +5,9 @@ the viewer to run against: one bridge, several TRUST nodes and several TEMPUS no
 Requirements: `TEMPUS-viewer-requirements.md`, section 14.5. Everything here is TEST data about an invented network, and
 the keys and passes are BEES's test-only ones.
 
-Status (2026-11-24): the data and the reference replies exist and are checked. The nodes are not built yet.
+Status (2026-11-24): the data and the reference replies exist and are checked. The first slice runs: a client calls
+`viewer:home/0` through the bridge, the bridge routes it to the content node, and the decoded result equals
+`data/out/replies/home.etf` (the reference bytes appear verbatim in the result frame). Only `home` is built so far.
 
 ## What exists
 
@@ -52,6 +54,23 @@ is a first draft of the conformance set (requirement 14.1).
 4. **The release compiler does not carry the standard library units** (`wire_etf`, `Supervisor`, `Carrier`, ...). Their
    sources come from the Silica repository at the release tag's commit, as BEES does by symbolic link (OI-18, accepted).
 
+## The first slice
+
+    SILICA_COMPILER=<release compiler> BEES_ROOT=<scratch clone of project-bees> SILICA_ROOT=<scratch clone of silica> testnet/build.sh
+    testnet/run_slice.sh
+
+`build.sh` clones the two public repositories where it is told, checks Silica out at the release commit
+(`e53689ec96c92699fc996a006762d40fcc288680`) and aborts if it is anywhere else, builds the natives, the content node
+(`nodes/content`, TRUST), the bridge (`nodes/bridge`, TEMPUS + TRUST client), and `nodes/replycheck`, which runs the
+content node's own entry without a network and compares its bytes with the reference. `run_slice.sh` starts the two
+nodes, calls `viewer:home/0` with `nodes/client/call_home.py` and stops them. The compiler must be passed on the make
+command line, because BEES's `silica.mk` ignores the environment variable. With the standard library taken from a local
+branch instead of the release commit, TLS never completed (OI-18). Ports: content TRUST 24400, bridge TEMPUS 24401.
+
+Found on the way: a TRUST frame is refused (`unknown_atom`) if it carries an atom missing from the program's atom table,
+so `true` and `false` must be in it (the generator adds them); and BEES's Python client cannot decode the tuples of a
+reply, so the script reads the raw frame bytes (OI-19).
+
 ## Plan for the nodes
 
 Topology (ports are provisional; the bridge's TEMPUS port is the default, 481):
@@ -64,7 +83,7 @@ Topology (ports are provisional; the bridge's TEMPUS port is the default, 481):
 | `authority` | TRUST | decides each name's mark (`look_only` or `does_something`) and runs `restart_node` |
 | `sentinel`, `edge1`, `edge2`, `edge3` | TEMPUS | a gossip network around the bridge, so the viewer talks to a real network |
 
-Steps, each with a trial and a golden as BEES does:
+Steps, each with a trial and a golden as BEES does (step 2 is done for `home`):
 
 1. Generate Silica for the replies: one typed vocabulary type (a sum of tagged tuples) and one builder per reply, with
    the large tables built from the same seeded generator in Silica (not literals), and a check that a node's reply bytes

@@ -1,0 +1,3 @@
+# the bridge's own atoms: the module and function it routes onward (viewer:home/0 to the content node)
+viewer
+home

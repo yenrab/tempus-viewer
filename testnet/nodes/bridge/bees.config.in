@@ -1,0 +1,20 @@
+%% The testnet's bridge, TRUST side (its TEMPUS side is given its values by bridge.role). A TRUST client only: no whitelist, so
+%% no TRUST listener; it calls the content node, pinned to a.pem. Its TRUST certificate is b.pem of BEES's TEST-ONLY
+%% certificates; its TEMPUS certificate is another key altogether (design 17.2).
+%% frame_size_max: 131072 (BEES's limit; the c3 trial's 4096 is too small for a reply). @BEES_ROOT@ is replaced by the Makefile.
+[
+  {mode, trust},
+  {node, [{name, "bridge@127.0.0.1"}]},
+  {trust, [
+    {port, 24406},
+    {listen_address, "127.0.0.1"},
+    {tls_opts, [{certfile, "@BEES_ROOT@/trials/n4_trust_tls/certs/b.pem"},
+                {keyfile, "@BEES_ROOT@/trials/n4_trust_tls/certs/b-key.pem"}]},
+    {whitelist_cert_dir, "@BEES_ROOT@/trials/n4_trust_tls/certs"},
+    {server_pins_file, "trust_servers.config"},
+    {call_timeout_ms, 3000},
+    {connect_timeout_ms, 2000},
+    {client_handshake_timeout, 2000},
+    {frame_size_max, 131072}
+  ]}
+].

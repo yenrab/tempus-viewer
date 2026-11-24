@@ -1,0 +1,29 @@
+// Prints, as hex, the bytes the content node computes for viewer:home/0: the generated MFA table's own `run` (decode of the
+// argument list, the call of viewer_replies@home, encode((:etf), value) minus the version byte), so no network is involved.
+// Part of the slice's checks: run_slice.sh compares this hex with data/out/replies/home.etf (minus its first byte).
+use bees_trust_mfa;
+use bees_trust_frame;
+
+module replycheck;
+
+fn hexd(v: int64) -> string { substring("0123456789abcdef", v, v + 1) }
+fn at(s: string, i: int64) -> int64 {
+    sequence proc[transport]
+        b: int64 <- byte_at(s, i)
+    produces pure b end
+}
+fn hex_of(s: string, i: int64, n: int64) -> string {
+    case i >= n of {
+        true -> "";
+        false -> concat(concat(hexd(at(s, i) / 16), hexd(at(s, i) % 16)), hex_of(s, i + 1, n))
+    }
+}
+fn main() -> int64 {
+    sequence proc[device_io]
+        r: { code: int64, why: atom, value: string } <- bees_trust_mfa@run(0, "j");
+        _: atom <- println(concat("code ", case r.code of { 0 -> "0"; _: int64 -> "not0" }));
+        fr: string <- bees_trust_frame@enc_result("home1", r.value);
+        _: atom <- println(concat("frame check code ", bees_trust_frame@int_text(bees_trust_frame@check(fr, 32, 131072))));
+        _: atom <- println(concat("etf ", hex_of(r.value, 0, length_bytes(r.value))))
+    produces pure 0 end
+}
