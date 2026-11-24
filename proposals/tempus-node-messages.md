@@ -497,22 +497,22 @@ are running there.
 
 Each has options and a recommendation.
 
-- OM-1. Where does the change live: new kinds in `tempus/1` (recommended) or `tempus/2`? A `tempus/2` ALPN (a new ALPN name, so against the no-new-transport ruling unless the owner allows it) would let old
+- OM-1. **RULED 2026-11-24 by the owner: new kinds inside `tempus/1` (the recommendation).** Where does the change live: new kinds in `tempus/1` (recommended) or `tempus/2`? A `tempus/2` ALPN (a new ALPN name, so against the no-new-transport ruling unless the owner allows it) would let old
   nodes refuse at the handshake, but forks every client. Recommendation: kinds in `tempus/1`; an old node refuses an
   unknown kind with a plain close, which the sender treats as failure.
-- OM-2. Key names, kind numbers, and whether key order is checked. The guide (section 14) says it did not check whether a node
+- OM-2. **RULED 2026-11-24 by the owner: kinds 15 (`message`) and 16 (`message_reply`); the short key names `to`, `k`, `b`; keys in name order REQUIRED (a frame with keys out of order is refused, so vector I8 is invalid).** Key names, kind numbers, and whether key order is checked. The guide (section 14) says it did not check whether a node
   accepts other valid ETF forms. Options: (a) the letters above; (b) longer names (`topic`, `payload`). Recommendation: (a) is
   compact but BEES's atoms are few; (b) reads better and costs a few bytes. Owner (or BEES) to choose; order: require it, as the
   other frames do ("keys in name order", section 5).
-- OM-3. Transport. Ruled by the owner: no new transport and no new encoding. What remains to confirm: messages ride
+- OM-3. **RULED 2026-11-24 by the owner: messages ride the existing TLS 1.3 over `(:tcp)` `tempus/1` connection only; the ESP32-S3 and NUCLEO boards stay outside TEMPUS. Other carriers (`:udp`, `:serial`, `:ble_gatt`) are not part of this proposal.** Transport. Ruled by the owner: no new transport and no new encoding. What remains to confirm: messages ride
   the existing TLS-over-`(:tcp)` `tempus/1` connection only (section 3.0), so the two boards (classical X25519, D41) stay
   outside TEMPUS and cannot message. Recommendation: confirm; revisit only with a TEMPUS ruling for boards (NQ-8 is the
   current ruling that TEMPUS is hybrid-only).
-- OM-4. One message per connection, or allow several on one connection (and later a long-lived channel for NAT'd nodes).
+- OM-4. **RULED 2026-11-24 by the owner: (a) one message per connection for v1. Connection reuse (b) and a persistent channel (c) are not part of v1; (c) is to be ruled on separately.** One message per connection, or allow several on one connection (and later a long-lived channel for NAT'd nodes).
   Options: (a) one per connection as for every request today; (b) up to N messages per connection; (c) a persistent channel.
   Recommendation: (a) for v1; (c) is the only way a NAT'd node could receive and would be a new design (liveness, idle
   timers, flow control) that the owner should rule on separately.
-- OM-5. Does a message cross token types (edge to bridge, edge to sentinel, bridge to sentinel)? Options: (a) any admitted
+- OM-5. **RULED 2026-11-24 by the owner: (a) any admitted peer may send to any type; the receiver decides by a configured set of accepted sender types, empty by default (a node refuses every message until configured).** Does a message cross token types (edge to bridge, edge to sentinel, bridge to sentinel)? Options: (a) any admitted
   peer to any type, receiver's config decides; (b) same type only (edge to edge, bridge to bridge, sentinel to sentinel);
   (c) edge to edge only. Recommendation: (a) with the receiver's accepted-sender set empty by default, so nothing is
   accepted until configured. Reason: BEES already limits who may do what by type ("TRUST decides what a member may do",
@@ -541,7 +541,7 @@ Each has options and a recommendation.
   spoofing does not apply. Option: cap `reply_max` below `msg_max` (recommend equal, 16384). Recommendation: accept.
 - OM-12. Flooding. See 3.8: node-wide bounds, plus the application's own per-peer table. Question: are node-wide bounds
   enough for an edge? Recommendation: yes for v1, measure in the matrix trial with a hostile sender.
-- OM-13. Payload size ceiling: 16384 (recommended; below the 131072 frame ceiling so message memory at `inflight_max` 64 is
+- OM-13. **RULED 2026-11-24 by the owner: 16384 bytes (message `b` and reply `b`).** Payload size ceiling: 16384 (recommended; below the 131072 frame ceiling so message memory at `inflight_max` 64 is
   64 x 16 KiB = 1 MiB, comparable to the stores' 1.2 MiB in design section 8). Alternatives: 4096, 65536.
 - OM-14. Topic `k`: an opaque byte string (recommended) or a registered atom set. Atoms need compile-time presence (D16), so
   a registry would make every program list every topic.
