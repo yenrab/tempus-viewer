@@ -5,6 +5,10 @@ Status: first draft, written 2026-11-23 from an interview with the owner. It fol
 requirement below was either ruled by the owner in the interview or is a stated consequence of a ruling. Where the
 owner has not ruled, the item is in section 15 and is not a requirement.
 
+Revision 2026-11-24: after reading `project-bees` and `silica` the owner ruled on the points in section 15 (OI-3
+partly, OI-6, the network client, call arguments, the test network, passes, domain names, the compiler). Those
+rulings are folded into sections 2, 3, 4, 5, 14, 15 and 16.
+
 Wording: "must" is a requirement. "Should" is a strong preference that may be dropped with a reason. "The browser" is
 the new native application, not a web browser.
 
@@ -39,46 +43,65 @@ the new native application, not a web browser.
    restarted by its supervisor.
 5. Drawing travels the other way. A window actor casts a command to an FFI worker, which passes it to the host.
 6. Network work must never freeze a window.
-7. Networking, TLS 1.3 with X25519MLKEM768, Ed25519 and admission are provided by BEES. The browser is an ordinary
-   edge peer and needs no new kind of token and no change to admission.
+7. Networking, TLS 1.3 with X25519MLKEM768, Ed25519 and admission are provided by the Swift TEMPUS client library
+   in `project-bees/example_tempus_clients/swift` (`TempusClient`), used as it is. It must not be copied into this
+   project. It is a dependency, built from its own place. Bugs found in it are fixed there, in the BEES project.
+   The browser is an ordinary edge peer and needs no new kind of token and no change to admission.
+   Silica actors drive it through the Swift host and the FFI workers of requirement 2.2: a request actor casts a
+   request to an FFI worker, which calls the library and casts the outcome back.
 8. The browser must be built from separate responsibilities at least along these lines (names are indicative):
    network store, key store, address parsing, request sending, reply checking, render assembly, tab, history, kept
    copies, window, event listening, refresh timers.
+9. Toolchain: the browser, the bridge, the TRUST nodes and the TEMPUS nodes of the test network are built with the
+   compiler that the link `silica/binaries/silica-compiler` names, and that link is always taken as the latest
+   compiler found. No version is pinned in this project. The Swift host builds with the installed Swift and the
+   installed OpenSSL (4.1.0 or later, as `project-bees/contract/what-is-required-to-use.md` requires).
 
 ## 3. Addresses and links
 
 1. The only link scheme the browser accepts is `tempus://`. Every other scheme must be refused, wherever it appears:
    in the address entry, in a command, in a pasted link, and in a request from the operating system.
 2. The form is `tempus://host[:port]/name?arguments`.
-3. The host is a domain name or an IP address. It identifies one specific bridge. The browser connects to that host
-   and port. There is no discovery of other bridges in version 1.
+3. The host is a domain name or an IP address, and both must work. It identifies one specific bridge. The browser
+   connects to that host and port, resolving a domain name in the Swift host (the library uses `getaddrinfo`). There
+   is no discovery of other bridges in version 1.
 4. `name` is a name that the network owner published. The application maps it to a function. Raw module and
    function names must not be accepted in an address.
 5. Arguments are byte strings (text), whole numbers and true/false only, so an address can be copied, sent and
    bookmarked.
 6. An address names only the first request of a render. Later requests come from commands and need no text form.
-7. The default port is not yet ruled (section 15).
+7. The default port is 481, used when an address names none. It is a configuration value (section 11), not a constant.
 
 ## 4. Networks, keys and passes
 
 1. The browser may contact a host only for a network the person has added. A link to a host that belongs to no
    added network must produce a clear message that the network has not been added, and no connection is made.
-2. Adding a network is a step in the browser. The person supplies what the network owner publishes outside the
+2. Adding a network is a step in the browser, and the person does it by importing a file. The file is in the
+   Erlang external term format (ETF), as BEES encodes everything. It never holds a private key. It holds the network's
+   producer key, a label, one or more bridge hosts with ports, and the pass. The person supplies what the network owner publishes outside the
    network (the producer's key, a label, and the host or hosts). The person gives the network a name.
 3. The browser holds one Ed25519 key per network. Keys are made by the browser.
 4. Admission is by a per-person pass. The browser shows the public half of the key for that network so the person
    can send it to the network owner. The owner returns a pass signed for that key. The person imports it.
+   For now, passes are the test-only tokens that BEES makes from fixed seeds (`tools/bees_tempus_ids.py`). No tool
+   for issuing real passes is built in this phase, and the test passes must never be treated as real ones.
 5. The pass lifetime is judged by the bridge on its own clock. The browser must record each pass's expiry, warn the
    person before it expires, and say plainly when it has expired and offer the import step again.
 6. Automatic renewal of a pass, a guest tier, and an open token endpoint are not in version 1. Networks that want
    public access publish the means of getting a pass outside the network.
 7. Private keys must be stored in the macOS Keychain.
 8. State is separate for each network, with no exception.
+9. Test mode. Because a pass is signed for one key and the test passes come from fixed test keys, a test build may load
+   a fixed test key in place of the Keychain key. This switch must live in a unit that only test builds list, as BEES's
+   test frames do. A production build must not contain it, and a check (as in BEES's `production-check`) must show
+   that it does not.
 
 ## 5. Requests
 
 1. A request is made with `call` through a bridge, using the existing BEES protocol.
-2. Every published name carries one of two marks: look-only or does-something. The network owner sets the mark.
+2. Every published name carries one of two marks: look-only or does-something. The mark is sent by the bridge. The
+   decision is made in a TRUST node behind the bridge, not in the bridge. The bridge never decides it. (How and when
+   the mark reaches the browser relative to a request is open: OI-3.)
 3. A link from outside the browser (pasted, from another application) may open only a look-only name. A
    does-something name must refuse to run from an outside link, and runs only when the person acts inside the
    browser, for example by pressing a button.
@@ -92,6 +115,16 @@ the new native application, not a web browser.
 8. Whether connection reuse is needed is decided after the trial in section 14. Until then the browser must work
    with one request per connection.
 9. The browser must slow down by itself when it is refused, and must not exceed the limits in section 11.
+10. The `call` frame must carry the arguments the browser sends: byte strings (text), whole numbers, true/false,
+    and one map (the form of requirement 5.6). The Swift `callFrame` today takes whole numbers only
+    (`args: [Int64]`) and must be updated, in `project-bees`, to carry these. The Silica client's frame builder and
+    the bridge's reading of arguments must be checked to agree, with the BEES conformance goldens extended to
+    cover them.
+11. Mark query (ruled 2026-11-24, OI-3). Before sending a request that came from an outside link, the browser first
+    asks the bridge for the mark of the name and sends the real request only if the answer is look-only. If the
+    bridge's answer is does-something, is missing, or cannot be read, the browser refuses the link and says why. The
+    query is one request and counts against the person's allowance. The bridge answers it from the decision of its
+    TRUST node. The query's form is to be defined on the BEES side.
 
 ## 6. Replies and the command vocabulary
 
@@ -101,7 +134,8 @@ the new native application, not a web browser.
 3. Names of commands and keys come from a fixed list with a version number, known to the browser and to every
    program that builds or checks a reply. Everything an author supplies (text, region names, field names, addresses)
    is a byte string.
-4. A reply states the vocabulary version it uses.
+4. A reply states the vocabulary version it uses. The vocabulary, its version and the conformance set (section 14.1)
+   live in this project. Servers that build replies take them from here.
 5. Version 1 commands, as three levels, all required:
    - Level 1, text and action:
      - regions: make a named region inside another, clear, remove, replace the content of a region;
@@ -186,8 +220,10 @@ Every limit in this table must be a configuration value, not a constant in the c
 | Minimum timed-refresh interval | 5 seconds |
 | Automatic requests for one render | 20 |
 | Parts loading at once per tab | 4 |
+| Tabs open at once | 8 |
+| Default port | 481 |
 
-The browser must check these against the configuration at the point of use. Section 15 lists limits not yet given
+The browser must check these against the configuration at the point of use. The tab cap of 8 is a starting value, to be revised from the numbers of the timing trial (section 14.4). Section 15 lists limits not yet given
 values (tab count, requests per interval).
 
 ## 12. Keeping, history and tabs
@@ -209,6 +245,18 @@ values (tab count, requests per interval).
 3. The browser does not show which bridge answered, because the host names one bridge.
 4. Pass expiry (section 4) is visible in the network list.
 
+### 13.1 Application shell (ruled 2026-11-24)
+
+Version 1 includes, as standard Mac behaviour:
+
+1. An address bar to type or paste a `tempus://` address, with the network name and host beside it, and tabs up to
+   the cap in section 11.
+2. A network list window to add a network by importing a file, name it, and see key fingerprints and pass expiry.
+3. The menu bar and keyboard shortcuts (new tab, close tab, reload, back, forward, copy).
+4. Find in page: a search of the text of the current screen.
+
+The exact menus and shortcut keys are still to be written down.
+
 ## 14. Verification
 
 1. **Conformance set.** From the start there is a fixed set of example replies with their expected results: valid
@@ -221,34 +269,55 @@ values (tab count, requests per interval).
    the commands and prints what it would display and do. It also measures the time of real requests, one at a time
    and several in turn, and of image parts. Its numbers decide connection reuse (section 5.8) and the part size
    (section 8.4).
+5. **Test network.** The browser, the command-line trial and the window checks run against a test network built
+   from BEES and the Silica compiler: one bridge, several TRUST nodes and several TEMPUS nodes. The TRUST nodes
+   export the functions that return commands, and one of them decides each published name's mark (requirement
+   5.2). The bridge's configuration is compiled in for now, as BEES does today, so changing a token, a whitelist
+   entry or a permission means a rebuild. The network uses BEES's test-only keys and passes (requirement 4.4), and the test build uses the fixed test key
+   (requirement 4.9). The
+   model for it is `project-bees/trials/c3_tempus_bridge` (a TRUST node, two bridges, and clients).
 
 ## 15. Open items (not requirements)
 
 These were not ruled and must be decided before or during the build.
 
-- OI-1. Default port for `tempus://`.
-- OI-2. A first real network to test against.
-- OI-3. How the look-only or does-something mark reaches the browser before it sends a request from an outside
-  link. Sending first and checking after is unsafe. Options: the application publishes a list of names with marks
-  that the browser reads when a network is added; the mark is part of the address; or the bridge refuses
-  does-something names from untrusted origins. This needs a BEES-side answer.
-- OI-4. Maximum number of tabs, and how the per-peer allowance at the bridge is divided among them. The bridge's
-  limits were designed for programs, not people clicking.
+- OI-1. RULED 2026-11-24: the default port is 481 (requirement 3.7).
+- OI-2. (Narrowed 2026-11-24.) The first network to test against is the test network of requirement 14.5. A real
+  network is still open.
+- OI-3. RULED 2026-11-24: the bridge sends the mark, a non-bridge TRUST node decides it, and the browser asks the
+  bridge first (requirement 5.11). The options considered were: ask the bridge first (chosen), a list read when a
+  network is added, and the bridge refusing by itself. Still to be defined on the BEES side: the form of the query.
+- OI-4. RULED 2026-11-24: a cap of 8 tabs (section 11), revisable from the timing trial. The allowance at the bridge
+  stays shared, as requirement 12.4 says. The bridge's limits were designed for programs, not people clicking.
 - OI-5. Whether the bridge may keep a connection open for several calls from one admitted peer. Decided after the
   trial in section 14.4.
-- OI-6. Text of the pass and network import format (a file, a code, or both).
-- OI-7. Exact extra tests for the Swift C interface, and how much of AppKit the first version maps (window layout,
-  menus, keyboard shortcuts are not yet specified).
-- OI-8. The scheme is fixed as `tempus`. The owner may still rename it.
-- OI-9. The size of the part for image requests, and the exact total image cap (5 MB is a starting value).
-- OI-10. Whether the reference replies and vocabulary version live in the BEES repository or here.
+- OI-6. (Narrowed 2026-11-24: passes are BEES's test-only ones for now, and no issuing tool is built.) Still open:
+  the format for importing a network and a pass. RULED 2026-11-24: a file in ETF, with no private key (requirement
+  4.2). A pasteable code may be added later. The exact layout of the term is still to be written down.
+- OI-11. Whether the Silica TCP carrier resolves domain names, or only the Swift host does. Requirement 3.3 puts
+  resolution in the Swift host, so this matters only if Silica code ever dials directly.
+- OI-12. Whether an Ed25519 key can be held in the macOS Keychain in a form the Swift library's OpenSSL
+  client certificate can use. The likely route is a stored raw key. This is unverified and is a spike of the
+  first build step.
+- OI-13. Whether the Swift host can own the main thread and the AppKit run loop while a Silica runtime runs
+  beside it, with a Swift-to-Silica entry that casts an event to an actor. The FFI trials show only Silica calling
+  C. This is the first spike.
+- OI-7. RULED in part 2026-11-24: the application shell is in section 13.1. Still open: the exact menus and
+  shortcut keys, the window layout, and the tests for the Swift C interface.
+- OI-8. SETTLED 2026-11-24: the scheme is `tempus` and is the only link type allowed.
+- OI-9. The total image cap of 5 MB is accepted as a configurable starting value. The size of the part waits for the
+  timing trial.
+- OI-10. RULED 2026-11-24: they live in this project (requirement 6.4).
 
 ## 16. Dependencies on other work
 
-- BEES: the client code and admission, and any change that OI-3 or OI-5 requires.
-- Silica: FFI to a C interface (present in `trials/ffi_addition`), actors, supervisors, TCP and TLS as provided
-  through BEES.
-- A Swift host with a C interface for the window, the controls and the Keychain.
+- BEES (`/Users/yenrab/project-bees`): the Swift TEMPUS client library, used in place and not copied; the update of
+  its `callFrame` (requirement 5.10); fixes to it as bugs are found; the bridge, TRUST and TEMPUS nodes for the test
+  network; and any change that OI-3 or OI-5 requires.
+- Silica (`/Users/yenrab/silica`): FFI to a C interface (present in `trials/ffi_addition`), actors, supervisors, and
+  the compiler named by `binaries/silica-compiler`, always the latest found (requirement 2.9).
+- A Swift host with a C interface for the window, the controls and the Keychain, linked with the Swift client
+  library.
 - Network owners who publish names with marks and publish passes outside the network.
 
 ## 17. Out of scope for version 1
