@@ -34,10 +34,15 @@ the new native application, not a web browser.
 1. The browser is a Silica application designed to Silica principles: a root supervisor, a supervision tree of
    whatever depth suits, many actors each with one responsibility, and `cast` in preference to `call` wherever
    possible.
-2. Windowing and drawing use native macOS widgets (AppKit). Silica does not call AppKit directly. A Swift host
+2. Windowing and drawing use SwiftUI (ruled 2026-11-24), not the older imperative, object-oriented approach of
+   building and mutating views. Silica does not call SwiftUI directly. A Swift host
    exposes a C interface, and Silica reaches it by FFI through guarded worker actors (the pattern in
    `silica/trials/ffi_addition`).
-3. The Swift host owns the main thread and the AppKit run loop. It applies drawing commands on the main thread.
+3. The Swift host is a SwiftUI application. It owns the main thread and the run loop that SwiftUI starts. Its views
+   are a function of state: a store of observable state holds the current display (tabs, regions, content). Silica
+   casts commands to the host, the host changes that state on the main thread, and the views redraw from it. No
+   code builds or edits a view directly. Where SwiftUI lacks a needed control, the host may wrap one native control
+   inside SwiftUI, and each such wrapper must be listed in this document with its reason.
 4. Events (clicks, keystrokes, window changes) travel from the Swift host into Silica by calls to a C entry point.
    Each becomes a cast to a supervised listener actor. The host never waits for a reply. A failed listener must be
    restarted by its supervisor.
@@ -201,7 +206,7 @@ the new native application, not a web browser.
 
 1. An image without a text description, and a form field without a label, are refused or shown with a visible mark.
 2. A render states its language.
-3. Commands map to the standard macOS controls so that VoiceOver, keyboard navigation, dark mode and system text
+3. Commands map to the standard SwiftUI controls (which are macOS controls underneath) so that VoiceOver, keyboard navigation, dark mode and system text
    size work without effort from the author. The browser must pass the text descriptions and labels to the
    operating system's accessibility interface.
 4. The person must be able to select and copy displayed text with the standard macOS shortcut. This is a feature
@@ -220,11 +225,10 @@ Every limit in this table must be a configuration value, not a constant in the c
 | Minimum timed-refresh interval | 5 seconds |
 | Automatic requests for one render | 20 |
 | Parts loading at once per tab | 4 |
-| Tabs open at once | 8 |
 | Default port | 481 |
 
-The browser must check these against the configuration at the point of use. The tab cap of 8 is a starting value, to be revised from the numbers of the timing trial (section 14.4). Section 15 lists limits not yet given
-values (tab count, requests per interval).
+The browser must check these against the configuration at the point of use. There is no limit on the number of tabs for now (ruled 2026-11-24). Section 15 lists limits not yet given values
+(requests per interval).
 
 ## 12. Keeping, history and tabs
 
@@ -249,8 +253,8 @@ values (tab count, requests per interval).
 
 Version 1 includes, as standard Mac behaviour:
 
-1. An address bar to type or paste a `tempus://` address, with the network name and host beside it, and tabs up to
-   the cap in section 11.
+1. An address bar to type or paste a `tempus://` address, with the network name and host beside it, and tabs in the
+   system window tab bar. There is no cap on the number of tabs for now.
 2. A network list window to add a network by importing a file, name it, and see key fingerprints and pass expiry.
 3. The menu bar and keyboard shortcuts (new tab, close tab, reload, back, forward, copy).
 4. Find in page: a search of the text of the current screen.
@@ -287,8 +291,10 @@ These were not ruled and must be decided before or during the build.
 - OI-3. RULED 2026-11-24: the bridge sends the mark, a non-bridge TRUST node decides it, and the browser asks the
   bridge first (requirement 5.11). The options considered were: ask the bridge first (chosen), a list read when a
   network is added, and the bridge refusing by itself. Still to be defined on the BEES side: the form of the query.
-- OI-4. RULED 2026-11-24: a cap of 8 tabs (section 11), revisable from the timing trial. The allowance at the bridge
-  stays shared, as requirement 12.4 says. The bridge's limits were designed for programs, not people clicking.
+- OI-4. RULED 2026-11-24 (changed the same day): no cap on tabs for now. The earlier cap of 8 is removed. All tabs on one
+  network still share one allowance at the bridge (requirement 12.4), and with no cap that shared counting and the
+  browser's own slowing down are the only protection. A cap may be added if the timing trial shows the bridge's
+  limits are reached by ordinary use. The bridge's limits were designed for programs, not people clicking.
 - OI-5. Whether the bridge may keep a connection open for several calls from one admitted peer. Decided after the
   trial in section 14.4.
 - OI-6. (Narrowed 2026-11-24: passes are BEES's test-only ones for now, and no issuing tool is built.) Still open:
@@ -296,12 +302,27 @@ These were not ruled and must be decided before or during the build.
   4.2). A pasteable code may be added later. The exact layout of the term is still to be written down.
 - OI-11. Whether the Silica TCP carrier resolves domain names, or only the Swift host does. Requirement 3.3 puts
   resolution in the Swift host, so this matters only if Silica code ever dials directly.
+- OI-14. RULED 2026-11-24: the latest macOS version only. The build machine's SDK is macOS 26. Older versions are not
+  supported, and the document need not describe their differences.
+- OI-15. Answered by reading the macOS 26 SDK's SwiftUI interface on 2026-11-24 (symbols present only; none was run
+  yet, so each row is confirmed by the first spike). Plan, with no wrapped native control assumed:
+  - Tables: SwiftUI `Table`.
+  - Find in page: SwiftUI `findNavigator(isPresented:)`; whether it searches custom views, and not only text
+    editors, is to be confirmed.
+  - Selecting and copying text: `textSelection(_:)` per text element. Selection across several elements is not
+    assumed. If it is wanted, a read-only `TextEditor` over attributed text is the fallback.
+  - Tabs: RULED 2026-11-24: the system window tab bar, so the person keeps the standard Mac behaviour (drag a tab
+    out to its own window, merge windows, the Window menu). With no cap, no wrapped control is needed
+    for tabs. The state of each tab stays in the app's state store, keyed by the window, so a tab dragged to a new
+    window keeps its display and history. The spike must show that this holds.
+  - Menus and shortcuts: SwiftUI `commands`.
+  Any control that the spike shows SwiftUI cannot supply is added to requirement 2.3's list of wrappers.
 - OI-12. Whether an Ed25519 key can be held in the macOS Keychain in a form the Swift library's OpenSSL
   client certificate can use. The likely route is a stored raw key. This is unverified and is a spike of the
   first build step.
 - OI-13. Whether the Swift host can own the main thread and the AppKit run loop while a Silica runtime runs
-  beside it, with a Swift-to-Silica entry that casts an event to an actor. The FFI trials show only Silica calling
-  C. This is the first spike.
+  beside it, with a Swift-to-Silica entry that casts an event to an actor. The host is a SwiftUI application, whose
+  `App` entry point starts the run loop. The FFI trials show only Silica calling C. This is the first spike.
 - OI-7. RULED in part 2026-11-24: the application shell is in section 13.1. Still open: the exact menus and
   shortcut keys, the window layout, and the tests for the Swift C interface.
 - OI-8. SETTLED 2026-11-24: the scheme is `tempus` and is the only link type allowed.
