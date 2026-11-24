@@ -1,0 +1,11 @@
+[
+  {vocabulary, #{version => 1}},
+  {title, #{text => <<"Nodes">>}},
+  {language, #{tag => <<"en">>}},
+  {keep, #{seconds => 10}},
+  {heading, #{into => <<"main">>, level => 1, text => <<"Nodes">>}},
+  {region, #{into => <<"main">>, name => <<"summary">>}},
+  {region, #{into => <<"main">>, name => <<"table">>}},
+  {fetch, #{into => <<"summary">>, request => #{name => <<"nodes_summary">>, args => []}}},
+  {fetch, #{into => <<"table">>, request => #{name => <<"nodes_table">>, args => [<<"1">>]}}}
+]

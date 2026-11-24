@@ -62,7 +62,11 @@ the new native application, not a web browser.
    and the TEMPUS nodes of the test network are built with the compiler binaries published in the releases of the
    public Silica repository (https://github.com/Silica-Language-and-Compiler/silica/releases), not with a compiler from
    a local checkout. The latest release is the one to use unless a ruling says otherwise, and no version is pinned
-   in this project. The Swift host builds with the installed Swift and the installed OpenSSL (4.1.0 or later, as
+   in this project. The release compiler does not carry the standard library units (`wire_etf`, `Supervisor`,
+   `Carrier` and others), so a build also takes their sources from the public Silica repository at the commit named
+   in the release's tag (the tag `compiler-<commit>`), never from an arbitrary local branch. (Ruled 2026-11-24, OI-18.
+   The three units the two spikes borrowed were checked against the commit of release `e53689e` and are identical.)
+   The Swift host builds with the installed Swift and the installed OpenSSL (4.1.0 or later, as
    BEES's `contract/what-is-required-to-use.md` requires).
 
 ## 3. Addresses and links
@@ -75,7 +79,7 @@ the new native application, not a web browser.
    is no discovery of other bridges in version 1.
 4. `name` is a name that the network owner published. The application maps it to a function. Raw module and
    function names must not be accepted in an address.
-5. Arguments are byte strings (text), whole numbers and true/false only, so an address can be copied, sent and
+5. Arguments are byte strings (text) only (ruled 2026-11-24, OI-17). A whole number or true/false is written as text, so an address can be copied, sent and
    bookmarked.
 6. An address names only the first request of a render. Later requests come from commands and need no text form.
 7. The default port is 481, used when an address names none. It is a configuration value (section 11), not a constant.
@@ -118,19 +122,19 @@ the new native application, not a web browser.
    viewer, for example by pressing a button.
 4. Only look-only requests may be sent automatically, refreshed on a timer, or kept for reuse.
 5. A command may name requests only on its own network.
-6. A form sends its fields as one map argument. Values are byte strings, numbers and true/false only. The
-   function must treat them as untrusted input.
+6. A form sends its fields as one flat list of byte strings: each field's name, then its value, in the order of the
+   form (a tick box is `true` or `false` as text, a number is its digits). The function must treat them as
+   untrusted input.
 7. A refusal, a failed function and a timeout look the same to the client. The viewer must show one message,
    "could not be fetched", in the region that was waiting. A function that ran and wants to report a problem does so
    by returning display commands.
 8. Whether connection reuse is needed is decided after the trial in section 14. Until then the viewer must work
    with one request per connection.
 9. The viewer must slow down by itself when it is refused, and must not exceed the limits in section 11.
-10. The `call` frame must carry the arguments the viewer sends: byte strings (text), whole numbers, true/false,
-    and one map (the form of requirement 5.6). The Swift `callFrame` today takes whole numbers only
-    (`args: [Int64]`) and must be updated, in `project-bees`, to carry these. The Silica client's frame builder and
-    the bridge's reading of arguments must be checked to agree, with the BEES conformance goldens extended to
-    cover them.
+10. Request arguments are one list of byte strings (ruled 2026-11-24, OI-17), which is what a TRUST export's single
+    element type allows (`args string`). The Swift `callFrame` takes whole numbers only (`args: [Int64]`) and must be
+    updated, in `project-bees`, to carry byte strings. The Silica client's frame builder and the bridge's reading of
+    arguments must be checked to agree, with the BEES conformance goldens extended to cover them.
 11. Mark query (ruled 2026-11-24, OI-3). Before sending a request that came from an outside link, the viewer first
     asks the bridge for the mark of the name and sends the real request only if the answer is look-only. If the
     bridge's answer is does-something, is missing, or cannot be read, the viewer refuses the link and says why. The
@@ -140,8 +144,11 @@ the new native application, not a web browser.
 ## 6. Replies and the command vocabulary
 
 1. A reply is a list of commands, carried out in the order given.
-2. A command is a map with one key that says which command it is, plus its values. Each command has a stated set of
-   keys. A new optional key may be added without breaking an old reader.
+2. A command is a tagged tuple of two elements: an atom that says which command it is, and one map that holds its
+   values, for example `{heading, #{into => <<"main">>, level => 1, text => <<"Nodes">>}}` (ruled 2026-11-24, OI-16;
+   a mixed list of commands cannot be a list of bare maps in Silica). Each command has a stated set of keys in its
+   map. A new optional key may be added to the map without breaking an old reader. A reader must not depend on the
+   order of the keys in a map.
 3. Names of commands and keys come from a fixed list with a version number, known to the viewer and to every
    program that builds or checks a reply. Everything an author supplies (text, region names, field names, addresses)
    is a byte string.
@@ -306,6 +313,16 @@ These were not ruled and must be decided before or during the build.
 - OI-6. (Narrowed 2026-11-24: passes are BEES's test-only ones for now, and no issuing tool is built.) Still open:
   the format for importing a network and a pass. RULED 2026-11-24: a file in ETF, with no private key (requirement
   4.2). A pasteable code may be added later. The exact layout of the term is still to be written down.
+- OI-16. RULED 2026-11-24: a command is a tagged tuple carrying one map (requirement 6.2). Found by the test network
+  (`testnet/experiments/etf-commands`): a command cannot be a bare map in Silica, because a sum may hold at most one
+  record variant (error E2404). Stock Erlang decodes the tagged form.
+- OI-17. RULED 2026-11-24: all arguments are byte strings (requirements 3.5, 5.6 and 5.10). Found by the test network: a TRUST
+  export declares `args <ElemType>`, one element type for the whole argument list, so the bridge's MFA table cannot
+  type mixed arguments. A number or true/false is written as text and the function reads it; a form is a flat list
+  of alternating names and values. No change to BEES's MFA table is needed. The Swift `callFrame` still has to
+  take byte strings.
+- OI-18. RULED 2026-11-24: accepted (requirement 2.9). The release compiler's binaries do not carry the standard
+  library units; their sources are taken from the Silica repository at the release tag's commit.
 - OI-11. Whether the Silica TCP carrier resolves domain names, or only the Swift host does. Requirement 3.3 puts
   resolution in the Swift host, so this matters only if Silica code ever dials directly.
 - OI-14. RULED 2026-11-24: the latest macOS version only. The build machine's SDK is macOS 26. Older versions are not

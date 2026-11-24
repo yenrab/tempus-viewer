@@ -1,0 +1,13 @@
+[
+  {vocabulary, #{version => 1}},
+  {heading, #{into => <<"main">>, level => 1, text => <<"Search">>}},
+  {form, #{into => <<"main">>, name => <<"q">>, fields => [
+    {text, #{name => <<"q">>, label => <<"Words to look for">>, value => <<"">>}},
+    {choice, #{name => <<"scope">>, label => <<"Where">>, value => <<"all">>, options => [
+      #{value => <<"nodes">>, label => <<"Nodes">>},
+      #{value => <<"events">>, label => <<"Events">>},
+      #{value => <<"all">>, label => <<"Everything">>}
+    ]}},
+    {tick, #{name => <<"exact">>, label => <<"Whole words only">>, value => false}}
+  ], submit => #{name => <<"search_results">>, args => []}, label => <<"Search">>}}
+]

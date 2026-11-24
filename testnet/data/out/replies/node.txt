@@ -1,0 +1,11 @@
+[
+  {vocabulary, #{version => 1}},
+  {heading, #{into => <<"main">>, level => 1, text => <<"Node n01">>}},
+  {table, #{into => <<"main">>, caption => <<"Details">>, columns => [<<"field">>, <<"value">>], rows => [
+    [<<"id">>, <<"n01">>],
+    [<<"role">>, <<"bridge">>],
+    [<<"status">>, <<"up">>],
+    [<<"port">>, <<"24001">>]
+  ]}},
+  {button, #{into => <<"main">>, label => <<"Restart this node">>, request => #{name => <<"restart_node">>, args => [<<"n01">>]}}}
+]

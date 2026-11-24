@@ -1,0 +1,320 @@
+{
+ "cases": [
+  {
+   "bytes": 37,
+   "name": "minimal",
+   "verdict": "accept",
+   "why": "a reply that only states its version"
+  },
+  {
+   "bytes": 1529,
+   "name": "every_display_command",
+   "verdict": "accept",
+   "why": "headings, runs, lists, quotation, rule, preformatted"
+  },
+  {
+   "bytes": 3455,
+   "name": "form_and_table",
+   "verdict": "accept",
+   "why": "a form with three field kinds and a table"
+  },
+  {
+   "bytes": 65632,
+   "name": "exact_text_limit",
+   "verdict": "accept",
+   "why": "text of exactly 64 KB, the limit"
+  },
+  {
+   "bytes": 56009,
+   "name": "exact_command_limit",
+   "verdict": "accept",
+   "why": "exactly 2000 commands, the limit"
+  },
+  {
+   "bytes": 1394,
+   "name": "exact_depth_limit",
+   "verdict": "accept",
+   "why": "regions nested exactly 32 deep, the limit"
+  },
+  {
+   "bytes": 164,
+   "name": "fallback_used",
+   "verdict": "use_fallback",
+   "why": "an unknown display command with the author's fallback (6.1.3)"
+  },
+  {
+   "bytes": 132,
+   "name": "unknown_display_no_fallback",
+   "verdict": "skip_with_note",
+   "why": "an unknown display command without a fallback is skipped with a visible note (6.1.3)"
+  },
+  {
+   "bytes": 65,
+   "name": "unknown_action",
+   "verdict": "refuse_reply",
+   "why": "an unknown action command refuses the whole reply (6.1.3)"
+  },
+  {
+   "bytes": 65,
+   "name": "newer_version",
+   "verdict": "refuse_reply",
+   "why": "a version newer than the viewer's (6.1.3)"
+  },
+  {
+   "bytes": 35,
+   "name": "no_version",
+   "verdict": "refuse_reply",
+   "why": "a reply must state its vocabulary version (6.4)"
+  },
+  {
+   "bytes": 65633,
+   "name": "text_too_long",
+   "verdict": "refuse_reply",
+   "why": "text over 64 KB (11)"
+  },
+  {
+   "bytes": 56037,
+   "name": "too_many_commands",
+   "verdict": "refuse_reply",
+   "why": "2001 commands (11)"
+  },
+  {
+   "bytes": 1437,
+   "name": "too_deep",
+   "verdict": "refuse_reply",
+   "why": "regions nested 33 deep (11)"
+  },
+  {
+   "bytes": 117,
+   "name": "image_without_alt",
+   "verdict": "refuse_command",
+   "why": "an image needs a text description (10.1)"
+  },
+  {
+   "bytes": 199,
+   "name": "field_without_label",
+   "verdict": "refuse_command",
+   "why": "a field needs a label (10.1)"
+  },
+  {
+   "bytes": 120,
+   "name": "link_not_tempus",
+   "verdict": "refuse_command",
+   "why": "only tempus:// links exist (3.1)"
+  },
+  {
+   "bytes": 11,
+   "name": "not_a_list",
+   "verdict": "refuse_reply",
+   "why": "a reply is a list of commands"
+  },
+  {
+   "bytes": 49,
+   "name": "untagged_command",
+   "verdict": "refuse_reply",
+   "why": "a command is a tagged tuple carrying a map"
+  },
+  {
+   "bytes": 98,
+   "name": "pid_in_reply",
+   "verdict": "refuse_reply",
+   "why": "a process identifier is not data (6.1.1); bytes made by Erlang term_to_binary of {rule, #{who => Pid}}"
+  }
+ ],
+ "frame_max": 131072,
+ "host": "127.0.0.1:481",
+ "images": {
+  "chart": {
+   "alt": "A bar chart of load: eight bars of rising height",
+   "bytes": 850,
+   "height": 200,
+   "parts_of_frame": 1,
+   "width": 320
+  },
+  "icon": {
+   "alt": "A small blue-green gradient square, the network's icon",
+   "bytes": 2017,
+   "height": 32,
+   "parts_of_frame": 1,
+   "width": 32
+  },
+  "photo": {
+   "alt": "A grey noise field used to test large images",
+   "bytes": 234174,
+   "height": 400,
+   "parts_of_frame": 2,
+   "width": 400
+  }
+ },
+ "limits": {
+  "commands": 2000,
+  "depth": 32,
+  "text": 65536
+ },
+ "names": {
+  "clock": {
+   "bytes": 135,
+   "doc": "",
+   "mark": "look_only",
+   "pages": []
+  },
+  "directory": {
+   "bytes": 845,
+   "doc": "",
+   "mark": "look_only",
+   "pages": []
+  },
+  "docs_commands": {
+   "bytes": 608,
+   "doc": "",
+   "mark": "look_only",
+   "pages": []
+  },
+  "docs_intro": {
+   "bytes": 1529,
+   "doc": "",
+   "mark": "look_only",
+   "pages": []
+  },
+  "empty": {
+   "bytes": 37,
+   "doc": "a valid reply with no commands",
+   "mark": "look_only",
+   "pages": []
+  },
+  "events": {
+   "bytes": 3473,
+   "doc": "page 1 of the event log; other pages take the page number as the argument",
+   "mark": "look_only",
+   "pages": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20"
+   ]
+  },
+  "fail": {
+   "bytes": 37,
+   "doc": "the function fails: the viewer sees only 'could not be fetched'",
+   "mark": "look_only",
+   "pages": []
+  },
+  "gallery": {
+   "bytes": 501,
+   "doc": "three images; the large one is above one frame and is fetched in parts by image_part",
+   "mark": "look_only",
+   "pages": []
+  },
+  "home": {
+   "bytes": 1170,
+   "doc": "the first screen; one region filled by a second request",
+   "mark": "look_only",
+   "pages": []
+  },
+  "live": {
+   "bytes": 313,
+   "doc": "a region refreshed every 5 seconds by a request",
+   "mark": "look_only",
+   "pages": []
+  },
+  "node": {
+   "bytes": 405,
+   "doc": "node detail; the button names a does-something request",
+   "mark": "look_only",
+   "pages": []
+  },
+  "nodes": {
+   "bytes": 431,
+   "doc": "a frame of two regions, each filled by its own request",
+   "mark": "look_only",
+   "pages": []
+  },
+  "nodes_summary": {
+   "bytes": 181,
+   "doc": "",
+   "mark": "look_only",
+   "pages": []
+  },
+  "nodes_table": {
+   "bytes": 2944,
+   "doc": "a table of forty rows",
+   "mark": "look_only",
+   "pages": []
+  },
+  "restart_node": {
+   "bytes": 181,
+   "doc": "an acting request: must not run from an outside link",
+   "mark": "does_something",
+   "pages": []
+  },
+  "samples": {
+   "bytes": 6240,
+   "doc": "a table of 2000 rows in pages of 100",
+   "mark": "look_only",
+   "pages": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20"
+   ]
+  },
+  "search": {
+   "bytes": 548,
+   "doc": "",
+   "mark": "look_only",
+   "pages": []
+  },
+  "search_results": {
+   "bytes": 381,
+   "doc": "the reply to the form: the form's fields arrive as one map argument",
+   "mark": "look_only",
+   "pages": []
+  },
+  "slow": {
+   "bytes": 119,
+   "doc": "a node that answers after a delay",
+   "mark": "look_only",
+   "pages": []
+  },
+  "status": {
+   "bytes": 120,
+   "doc": "a reply that fills the region named in home",
+   "mark": "look_only",
+   "pages": []
+  }
+ },
+ "seed": 481,
+ "vocabulary": 1
+}

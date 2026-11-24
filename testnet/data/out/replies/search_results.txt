@@ -1,0 +1,11 @@
+[
+  {vocabulary, #{version => 1}},
+  {heading, #{into => <<"main">>, level => 2, text => <<"Results">>}},
+  {table, #{into => <<"main">>, caption => <<"Matches">>, columns => [<<"kind">>, <<"id">>, <<"text">>], rows => [
+    [<<"node">>, <<"n01">>, <<"bridge-01">>],
+    [<<"node">>, <<"n02">>, <<"trust-02">>],
+    [<<"node">>, <<"n03">>, <<"sentinel-03">>],
+    [<<"node">>, <<"n04">>, <<"edge-04">>],
+    [<<"node">>, <<"n05">>, <<"bridge-05">>]
+  ]}}
+]

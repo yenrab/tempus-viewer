@@ -1,0 +1,28 @@
+[
+  {vocabulary, #{version => 1}},
+  {title, #{text => <<"Introduction">>}},
+  {language, #{tag => <<"en">>}},
+  {keep, #{seconds => 300}},
+  {heading, #{into => <<"main">>, level => 1, text => <<"Introduction">>}},
+  {paragraph, #{into => <<"main">>, runs => [{plain, <<"The viewer decides how every thing looks. The viewer decides..." (186 bytes)>>}]}},
+  {heading, #{into => <<"main">>, level => 2, text => <<"What a command is">>}},
+  {paragraph, #{into => <<"main">>, runs => [
+    {plain, <<"A screen may be built from several requests. Each region is ..." (193 bytes)>>},
+    {code, <<" {heading, #{...}} ">>}
+  ]}},
+  {quotation, #{into => <<"main">>, runs => [{plain, <<"The viewer decides how it looks.">>}], cite => <<"design notes">>}},
+  {rule, #{into => <<"main">>}},
+  {heading, #{into => <<"main">>, level => 2, text => <<"A list">>}},
+  {list, #{into => <<"main">>, ordered => false, items => [
+    [{plain, <<"A pass is signed for one key.">>}],
+    [{plain, <<"A pass is signed for one key.">>}],
+    [{plain, <<"A pass is signed for one key. The viewer decides how every thing looks.">>}]
+  ]}},
+  {heading, #{into => <<"main">>, level => 2, text => <<"Steps">>}},
+  {list, #{into => <<"main">>, ordered => true, items => [
+    [{plain, <<"Add the network.">>}],
+    [{plain, <<"Open an address.">>}],
+    [{plain, <<"Read the screen.">>}]
+  ]}},
+  {preformatted, #{into => <<"main">>, text => <<"tempus://127.0.0.1:481/home">>}}
+]

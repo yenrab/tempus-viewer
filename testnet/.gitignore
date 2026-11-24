@@ -1,0 +1,10 @@
+experiments/etf-commands/*.o
+experiments/etf-commands/*.sams
+experiments/etf-commands/*.iface
+experiments/etf-commands/silica.atoms
+experiments/etf-commands/silica.shapes
+experiments/etf-commands/cmds_exe
+experiments/etf-commands/wire_etf.silica
+experiments/etf-commands/compile.log
+data/__pycache__/
+experiments/etf-commands/*.derived

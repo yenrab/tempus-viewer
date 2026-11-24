@@ -1,0 +1,7 @@
+[
+  {vocabulary, #{version => 1}},
+  {paragraph, #{into => <<"main">>, runs => [
+    {strong, <<"Restart requested">>},
+    {plain, <<" for node n01. (Nothing restarts: this is test data.)">>}
+  ]}}
+]

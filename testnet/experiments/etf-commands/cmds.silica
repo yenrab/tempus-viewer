@@ -1,0 +1,42 @@
+use wire_etf;
+
+module cmds;
+
+fn hexd(v: int64) -> string { substring("0123456789abcdef", v, v + 1) }
+fn at(s: string, i: int64) -> int64 {
+    sequence proc[transport]
+        b: int64 <- byte_at(s, i)
+    produces pure b end
+}
+fn hex_of(s: string, i: int64, n: int64) -> string {
+    case i >= n of {
+        true -> "";
+        false -> concat(concat(hexd(at(s, i) / 16), hexd(at(s, i) % 16)), hex_of(s, i + 1, n))
+    }
+}
+
+fn commands() -> List[(:heading, { into: string, level: int64, text: string }) | (:paragraph, { into: string, text: string }) | (:table_row, { into: string, cells: List[string, mem(normal)] }), mem(normal)] {
+    sequence proc[mem(normal)]
+        cs: List[(:heading, { into: string, level: int64, text: string }) | (:paragraph, { into: string, text: string }) | (:table_row, { into: string, cells: List[string, mem(normal)] }), mem(normal)] <- [
+            (:heading, { into: "main", level: 1, text: "Nodes" }),
+            (:paragraph, { into: "main", text: "Twelve nodes are up." }),
+            (:table_row, { into: "t1", cells: ["n1", "up", "3"] })
+        ]
+    produces pure cs end
+}
+
+fn encoded() -> string {
+    sequence proc[mem(normal), transport]
+        v: List[(:heading, { into: string, level: int64, text: string }) | (:paragraph, { into: string, text: string }) | (:table_row, { into: string, cells: List[string, mem(normal)] }), mem(normal)] <- commands();
+        s: string <- encode((:etf), v)
+    produces pure s end
+}
+
+fn main() -> int64 {
+    sequence proc[device_io]
+        s: string <- encoded();
+        _: atom <- println(concat("etf ", hex_of(s, 0, length_bytes(s))))
+    produces
+        pure 0
+    end
+}

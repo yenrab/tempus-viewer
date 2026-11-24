@@ -128,6 +128,9 @@ field changes the size of the tuple, which breaks an old reader. (c) is in betwe
 Recommendation: (a), with the rule the protocol already has for its own maps: a stated set of keys for each command.
 Whether an unknown key is refused or ignored is BQ-6.
 
+RULED (owner, 2026-11-24): a tagged tuple that carries one map, `{heading, #{...}}`. A mixed list of commands cannot be
+a list of bare maps in Silica (a sum may hold one record variant, E2404). See requirement 6.2 and OI-16.
+
 ### BQ-3. Are the names of commands and keys atoms or byte strings?
 
 - a. Atoms.

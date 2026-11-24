@@ -1,0 +1,26 @@
+[
+  {vocabulary, #{version => 1}},
+  {title, #{text => <<"Test network">>}},
+  {language, #{tag => <<"en">>}},
+  {keep, #{seconds => 30}},
+  {heading, #{into => <<"main">>, level => 1, text => <<"Test network">>}},
+  {paragraph, #{into => <<"main">>, runs => [
+    {plain, <<"An invented network of ">>},
+    {strong, <<"forty nodes">>},
+    {plain, <<" used to try the viewer. See the ">>},
+    {link, #{text => <<"directory">>, to => <<"tempus://127.0.0.1:481/directory">>}},
+    {plain, <<" or read the ">>},
+    {link, #{text => <<"introduction">>, to => <<"tempus://127.0.0.1:481/docs_intro">>}},
+    {plain, <<".">>}
+  ]}},
+  {region, #{into => <<"main">>, name => <<"status">>}},
+  {fetch, #{into => <<"status">>, request => #{name => <<"status">>, args => []}}},
+  {list, #{into => <<"main">>, ordered => false, items => [
+    [{link, #{text => <<"Nodes">>, to => <<"tempus://127.0.0.1:481/nodes">>}}],
+    [{link, #{text => <<"Events">>, to => <<"tempus://127.0.0.1:481/events?a0=1">>}}],
+    [{link, #{text => <<"Search">>, to => <<"tempus://127.0.0.1:481/search">>}}],
+    [{link, #{text => <<"Gallery">>, to => <<"tempus://127.0.0.1:481/gallery">>}}],
+    [{link, #{text => <<"Samples">>, to => <<"tempus://127.0.0.1:481/samples?a0=1">>}}],
+    [{link, #{text => <<"Live clock">>, to => <<"tempus://127.0.0.1:481/live">>}}]
+  ]}}
+]

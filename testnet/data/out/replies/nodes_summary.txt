@@ -1,0 +1,4 @@
+[
+  {vocabulary, #{version => 1}},
+  {list, #{into => <<"summary">>, ordered => false, items => [[{plain, <<"up: 32">>}], [{plain, <<"degraded: 6">>}], [{plain, <<"down: 2">>}]]}}
+]

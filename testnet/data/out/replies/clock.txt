@@ -1,0 +1,5 @@
+[
+  {vocabulary, #{version => 1}},
+  {clear, #{region => <<"clock">>}},
+  {paragraph, #{into => <<"clock">>, runs => [{plain, <<"tick 0">>}]}}
+]

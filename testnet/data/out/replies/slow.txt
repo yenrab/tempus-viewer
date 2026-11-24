@@ -1,0 +1,4 @@
+[
+  {vocabulary, #{version => 1}},
+  {paragraph, #{into => <<"main">>, runs => [{plain, <<"Answered after a delay.">>}]}}
+]

@@ -1,0 +1,7 @@
+[
+  {vocabulary, #{version => 1}},
+  {heading, #{into => <<"main">>, level => 1, text => <<"Live clock">>}},
+  {region, #{into => <<"main">>, name => <<"clock">>}},
+  {fetch, #{into => <<"clock">>, request => #{name => <<"clock">>, args => [<<"0">>]}}},
+  {refresh, #{into => <<"clock">>, every_s => 5, request => #{name => <<"clock">>, args => [<<"1">>]}}}
+]

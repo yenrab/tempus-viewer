@@ -1,0 +1,4 @@
+[
+  {vocabulary, #{version => 1}},
+  {paragraph, #{into => <<"status">>, runs => [{plain, <<"32 of 40 nodes are up.">>}]}}
+]
