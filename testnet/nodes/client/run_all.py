@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Starts the three TRUST nodes and the bridge, calls every name through the bridge and compares with the reference data.
+"""Calls every name through the bridge of a running network and compares with the reference data. The network must be up
+(testnet/network.sh start; testnet/run_all.sh starts it, runs this and the TEMPUS checks, and stops it).
 
-    BEES_ROOT=... python3 run_all.py [--keep-going]
+    BEES_ROOT=... python3 run_all.py
 
 For every name and page: the decoded value must equal the term of data/out/replies/NAME[.N].etf and the reference bytes
 (without the version byte) must appear verbatim inside the result frame. For every name viewer:mark is called and compared with
@@ -17,7 +18,6 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(TESTNET, "data"))
 import call_home  # noqa: E402
 import etf  # noqa: E402
-from run_slice import Node  # noqa: E402
 
 RUN = os.path.join(TESTNET, "run")
 REPLIES = os.path.join(TESTNET, "data", "out", "replies")
@@ -68,20 +68,8 @@ def check_reply(group, label, name, args, ref_name):
 
 
 def main(argv):
-    os.makedirs(RUN, exist_ok=True)
-    nodes = {}
-    try:
-        for n, port in (("content", 24400), ("data", 24410), ("authority", 24420)):
-            nodes[n] = Node(os.path.join(TESTNET, "nodes", n), "dangerous_" + n, os.path.join(RUN, n + ".log"))
-            nodes[n].wait(r"listening on 127\.0\.0\.1:%d" % port)
-        nodes["bridge"] = Node(os.path.join(TESTNET, "nodes", "bridge"), "dangerous_bridge", os.path.join(RUN, "bridge.log"))
-        nodes["bridge"].wait(r"^join: no sentinel is configured$")
-        run_checks()
-    finally:
-        for n in ("bridge", "authority", "data", "content"):
-            if n in nodes:
-                print("%s.log exit=%s" % (n, nodes[n].stop()))
-    return report()
+    """the network is started and stopped by testnet/network.sh (run_all.sh does both around this script)"""
+    return run_checks() or report()
 
 
 def run_checks():

@@ -1,0 +1,6 @@
+// Testnet edge 2: TEMPUS identity 5 (BEES's TEST-ONLY certificate "x2"), an edge token (type 1); it joins through the
+// sentinel at 127.0.0.1:24430. TEMPUS port 24432.
+fn me() -> int64 { 5 }
+fn typ() -> int64 { 1 }
+fn port() -> string { "24432" }
+fn sents() -> string { "127.0.0.1:24430" }

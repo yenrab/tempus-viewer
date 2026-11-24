@@ -41,7 +41,7 @@ rm -f "$BEES_ROOT/native/dangerous_exposure_source/lib/libsilica_sockets.a" "$BE
 make -C "$BEES_ROOT/native" all
 python3 "$BEES_ROOT/tools/bees_tempus_certs.py" check
 make -C "$BEES_ROOT" check-compiler SILICA_COMPILER="$SILICA_COMPILER" || true
-for leaf in content data authority bridge replycheck; do
+for leaf in content data authority bridge tempus replycheck; do
     make -C "$here/nodes/$leaf" clean-generated SILICA_COMPILER="$SILICA_COMPILER"
     start=$(date +%s)
     make -C "$here/nodes/$leaf" build SILICA_COMPILER="$SILICA_COMPILER"

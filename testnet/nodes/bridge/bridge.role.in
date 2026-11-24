@@ -64,12 +64,14 @@ fn app(msg: $NM$, s: $BA$) -> (:no_reply, $BA$) {
         }
     produces pure (:no_reply, s2) end
 }
-fn wl() -> string { concat(concat(tempus_ids@fp_hex(3), tempus_ids@fp_hex(4)), tempus_ids@fp_hex(7)) }
+fn wl() -> string { concat(concat(concat(tempus_ids@fp_hex(2), tempus_ids@fp_hex(3)), tempus_ids@fp_hex(4)), tempus_ids@fp_hex(7)) }
+// the sentinel of the network (testnet/nodes/tempus, identity 2, TEMPUS port 24430): the bridge joins through it at start
+fn sentinel() -> string { "127.0.0.1:24430" }
 fn tempus_side() -> atom {
     sequence proc[concurrency]
         a: actor_ref <- spawn({ n: 0 }, app, stack_policy(0, :keep_last_message), state_policy(:keep_state_area));
         idn: $NI$ <- { id: hx(tempus_ids@id_hex(me())), pub: hx(tempus_ids@pub_hex(me())), seed: hx(tempus_ids@seed_hex(me())), addr: concat("127.0.0.1:", port()), token: hx(tempus_ids@tok_hex(me(), 13)), typ: 2 };
-        net: $NN$ <- { listen: concat("listen:", port()), spec: tempus_spec(tempus_ids@certfile(me()), tempus_ids@keyfile(me())), sents: "", wl: wl(), kid: tempus_ids@kid(), ppub: hx(tempus_ids@producer_pub_hex()), ms: 5000, mst: "5000", max: 4, skew: tempus_ids@skew(), j0: 200, j1: 800, back: 1, blim: 0, fail: 2, every: 1000 };
+        net: $NN$ <- { listen: concat("listen:", port()), spec: tempus_spec(tempus_ids@certfile(me()), tempus_ids@keyfile(me())), sents: sentinel(), wl: wl(), kid: tempus_ids@kid(), ppub: hx(tempus_ids@producer_pub_hex()), ms: 5000, mst: "5000", max: 4, skew: tempus_ids@skew(), j0: 200, j1: 800, back: 1, blim: 0, fail: 2, every: 1000 };
         sz: $NZ$ <- { k1: 4, c1: 3, t1: 1000, k2: 4, c2: 2, t2: 1000, k3: 4, c3: 2, t3: 1000 };
         x: actor_ref <- bees_tempus_test@start(tempus_ids@now());
         drv: $NT$ <- { driven: true, ext: x, draws: "0,1,2,3" };

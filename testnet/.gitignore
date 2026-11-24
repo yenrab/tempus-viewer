@@ -30,6 +30,8 @@ nodes/*/dangerous_content
 nodes/*/dangerous_data
 nodes/*/dangerous_authority
 nodes/*/dangerous_bridge
+nodes/tempus/dangerous_sentinel
+nodes/tempus/dangerous_edge[0-9]
 nodes/*/dangerous_*.silica
 nodes/*/trust_whitelist.config
 nodes/bridge/bridge.role

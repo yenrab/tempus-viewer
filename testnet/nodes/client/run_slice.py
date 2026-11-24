@@ -95,7 +95,7 @@ def main(argv):
         content = Node(os.path.join(TESTNET, "nodes", "content"), "dangerous_content", os.path.join(RUN, "content.log"))
         content.wait(r"listening on 127\.0\.0\.1")
         bridge = Node(os.path.join(TESTNET, "nodes", "bridge"), "dangerous_bridge", os.path.join(RUN, "bridge.log"))
-        bridge.wait(r"^join: no sentinel is configured$")
+        bridge.wait(r"tempus_bridge node \S+ listening on 127\.0\.0\.1:24401")  # its sentinel (network.sh) need not be there: the join retries
         rc = call_home.main(["--name", a.name])
         time.sleep(0.5)
     finally:

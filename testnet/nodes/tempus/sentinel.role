@@ -1,0 +1,6 @@
+// Testnet sentinel: TEMPUS identity 2 ("sentinel" of BEES's TEST-ONLY certificates), a sentinel token (type 3), the first
+// sentinel of the network, so it has no sentinel of its own. TEMPUS port 24430.
+fn me() -> int64 { 2 }
+fn typ() -> int64 { 3 }
+fn port() -> string { "24430" }
+fn sents() -> string { "" }
