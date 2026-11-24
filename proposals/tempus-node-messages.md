@@ -1,7 +1,13 @@
 # Proposal: messages between TEMPUS nodes
 
-Status: PROPOSAL (revised twice: direct peer to peer only; existing `:etf` encoding and existing transport only) for the owner to rule on. Nothing here is decided. The protocol change belongs in BEES, so this is
+Status: PROPOSAL, revised three times (direct peer to peer only; existing `:etf` encoding and existing transport only; owner rulings of 2026-11-24 folded in). The protocol change belongs in BEES, so this is
 written as a proposal to BEES's design (`development-plan/tempus-design.md`) and to the example clients. Date 2026-11-24.
+
+> **Status (2026-11-24).** The owner ruled all 19 open questions (OM-1 to OM-19, section 6) on 2026-11-24. Nothing is built:
+> no BEES change, no viewer code, no test-network change, no vectors frozen. Text marked "recommended, ruled" was a
+> recommendation that the owner accepted; text marked "overridden" was a recommendation that a ruling replaced. The viewer
+> (the Swift application in this repository) sends and receives messages in v1 (OM-9, OM-16 to OM-19); its requirements are in
+> `TEMPUS-viewer-requirements.md` section 18 and its work is listed in section 4.5.
 
 Owner constraint received with this task: TEMPUS nodes talk to each other directly, peer to peer, and never through a
 bridge or any other node. That removes the relay option (section 2, "Ruled out") and shapes sections 3 and 5.
@@ -13,7 +19,7 @@ something I say so. Nothing in BEES was changed.
 
 Goal. Let an admitted TEMPUS node send an application message to another TEMPUS node it can reach, directly, and let
 the receiving application handle it and (optionally) answer. Every example client (Swift, Kotlin, Python, Silica,
-gossip drivers) and the Silica node must be able to both send and receive.
+gossip drivers), the Silica node and the viewer (the native macOS application of this repository, OM-9) must be able to both send and receive.
 
 Today TEMPUS carries membership traffic only. The requests a node accepts are `shuffle`, `sample`, and (on a bridge)
 `call`/`cast` (`bees:src/tempus/bees_tempus_node.part:349-361`: `tn_request`, anything else is refused
@@ -32,7 +38,8 @@ Non-goals (nothing below changes any of these):
   rule that BEES forwards nothing (`bees:src/tempus/bees_tempus_bridge.silica:9-12`).
 - Relaying, store-and-forward, delivery receipts from third parties, a directory, group messaging, ordering across
   messages, end-to-end encryption beyond the TLS hop, large payload transfer, presence.
-- The viewer. It stays a client of the bridge only (recommendation OM-9).
+- Anything but the node-to-node message. The viewer is not excluded: it sends and receives messages in v1 as a node that listens and
+  joins gossip as an edge (OM-9, OM-17, OM-19). What a message may do there is limited (OM-16): it is shown to the person and nothing is executed.
 
 ## 2. Options
 
@@ -45,7 +52,7 @@ node on the path, is ruled out by the owner. It would also have fought the exist
 nothing, and an edge's identity is never passed onward (`bees:development-plan/tempus-design.md:1124-1127`;
 "TRUST node to edge, bridge to edge: not provided", line 372). Not considered further.
 
-### Option A: a `message` frame on the existing admitted connection (recommended)
+### Option A: a `message` frame on the existing admitted connection (recommended, ruled: OM-1, OM-3, OM-4)
 
 A new request kind, `message`, sent by the dialing side as the one request of a connection; the answer is one
 `message_reply` frame; then close. It reuses TLS, admission, the connection deadline, `inflight_max`, the frame
@@ -86,7 +93,7 @@ The hook hands unknown kinds to an application actor, but only for `driven` node
 is explicitly "no part of `tempus/1` as the library reads it" (`bees:development-plan/tempus-design.md:931-995`). Production nodes never see
 it. Not suitable.
 
-### Recommendation
+### Recommendation (recommended, ruled)
 
 Option A for v1: a `message` request on the existing admitted `tempus/1` connection, encoded with `encode((:etf), ...)`,
 over the existing TLS-over-`(:tcp)` transport, with node-wide bounds (section 3.8) so floods do not starve gossip, and
@@ -235,8 +242,8 @@ Who may send, by token type (the type is the `typ` of the admitted token, as for
 The library rule is the same for every pair and is a configuration of the receiver, in the style of the bridge's
 permission spec ("`none` by default", `bees:development-plan/tempus-design.md:365`): a node is started with a set of
 sender types it accepts messages from; the empty set, which a node that does not configure it holds, refuses every
-`message`. BEES has no default (OQ-11, OQ-25 pattern). The type of a message crossing groups (edge to bridge, edge to
-sentinel) is an open question (OM-5); the shuffle isolation of stores is untouched because no store is read or written
+`message`. BEES has no default (OQ-11, OQ-25 pattern). Messages crossing groups (edge to bridge, edge to
+sentinel) are allowed by the receiver's configuration (OM-5, ruled); the shuffle isolation of stores is untouched because no store is read or written
 by a message.
 
 A bridge needs no special case: a message to a bridge is handled by its application as any other node's. A bridge
@@ -284,9 +291,8 @@ After admission the connection actor reads the frame. New dispatch, in the place
   runs a fresh 32-byte nonce in both directions and the proof binds the nonce to the token (`writing-a-tempus-client.md`
   section 6, step 5-6), over TLS. Nothing new is needed.
 - Duplicates by the sender (a retry): the `id` lets the application recognise a repeat. BEES keeps no state for it: edges
-  keep nothing per peer. Recommendation: the library does not deduplicate; it hands the application the sender id and the
-  message `id` and the application keeps its own window (OM-6 asks whether the library should offer a bounded
-  recent-id ring).
+  keep nothing per peer. Ruled (OM-6): the library does not deduplicate; it hands the application the sender id and the
+  message `id` and the application keeps its own window. There is no library ring of recent ids.
 - Cross-recipient replay: `to` stops a message addressed to node X being accepted by node Y.
 
 ### 3.8 Refusals, score, rate and in-flight bounds
@@ -313,8 +319,7 @@ ceilings with configured values at or below them (D47 pattern, no defaults, as O
 - `msg_rate` and `msg_interval_ms`: node-wide messages accepted per interval (ceiling 1000000 per interval, interval 1 ms to
   3600000 ms, the bridge's own ceilings in 17.5).
 - Per peer: at a bridge the existing per-peer table gives rate and in-flight bounds and the score. At an edge or sentinel
-  there is none; the application has the peer id in every message and may keep its own table. OM-8 asks whether BEES
-  should add a per-peer bound to all nodes (it would be the first per-edge state outside the views).
+  there is none; the application has the peer id in every message and may keep its own table. OM-8 is ruled: no per-peer bound is added to non-bridge nodes (it would be the first per-edge state outside the views). The viewer keeps its own per-sender rate and stored cap (OM-18).
 - Sender side: the sender's own dial rate is its application's; the library enforces its connection deadline as for any dial.
 
 ### 3.9 Reachability, NAT and firewalls (stated honestly)
@@ -326,12 +331,12 @@ traversal, relay, hole punching or STUN in BEES's TEMPUS design or code. So:
 - A node behind NAT or a firewall that cannot accept inbound connections cannot receive a message that it did not ask
   for. Gossip already has this limit: nodes that cannot be dialed are dropped as dead partners (section 10).
 - A message that a NAT'd node initiates works, and the reply returns on the same connection. So request/reply is the
-  one pattern open to an outbound-only node. A message from a reachable node to a NAT'd node fails; the sender sees only a
+  one pattern open to a node that can only dial. A message from a reachable node to a NAT'd node fails; the sender sees only a
   failed dial or close, and nothing else.
 - Nothing carries the message for the sender: no relay, no store-and-forward (owner's constraint). The application retries
-  or gives up. If the owner wants a NAT'd node to receive, it must open a port or keep an outbound connection; v1 has no
-  long-lived connection, so it cannot receive that way (OM-4).
-- Browsers cannot listen at all. That is why the viewer is outbound-only (OM-9).
+  or gives up. A NAT'd node must have a port open to receive; v1 has no
+  long-lived connection, so it cannot receive any other way (OM-4, OM-15: NAT is not handled in v1).
+- The viewer listens while the app is open (OM-9, OM-17) and joins gossip as an edge (OM-19). A viewer behind NAT is reachable only where its machine is, as for any node (OM-15).
 - The advertised `addr` is the node's claim; a dialer connecting to it learns whether it is right only by admission, which
   checks `id` and the certificate key (section 3.4 step: `advert.d.id == d.id`).
 
@@ -353,7 +358,7 @@ There is no time field in the message and the library reads no clock for it. Wha
 
 ## 4. Work needed per component
 
-Line numbers are the current ones in the BEES clone. All paths below are relative to the BEES root. I give the files each
+Line numbers are the current ones in the BEES clone. All paths in 4.1 to 4.4 are relative to the BEES root; section 4.5 is the viewer's work, in this repository. I give the files each
 would change from my reading; BEES's author will know of more.
 
 ### 4.1 Silica node (`src/tempus`)
@@ -477,6 +482,28 @@ Model on `trials/c7_tempus_gossip` (a leaf Makefile delegating to `example_tempu
 - Conformance vectors (4.3) run first in each language's own unit tests, so a wire error is found before the matrix.
 - Only one network at a time on the c7 ports; the matrix runs after c7, not beside it.
 
+### 4.5 The viewer (Swift application, this repository)
+
+Ruled in OM-9 and OM-16 to OM-19. The viewer uses the Swift TEMPUS client library in `project-bees` in place (it is not copied), so
+the library work of 4.2 (Swift) is a prerequisite. The viewer's own work, in files of this repository that are to be created (no
+file named here exists yet; names are indicative, and the viewer's requirements are `TEMPUS-viewer-requirements.md` section 18):
+
+1. A listener in the Swift host: it binds a fixed, configurable port while the app is open and closes it when the app quits
+   (OM-17). It runs the library's listener with a message handler (the hook of 4.2) and the receiver's accepted-sender set (empty
+   by default, OM-5, chosen by the person per network, OM-18). It refuses everything while receiving is off for the network.
+2. Gossip membership as an edge (OM-19): join through a sentinel, the shuffle timers and the three stores kept by the library's
+   `Peer`, an advertised `host:port` (editable; default the machine's LAN address and the configured fixed port), and the
+   edge token that the network owner issues for the viewer's key, held beside the bridge pass. The same Keychain seed serves both roles.
+3. Sending: a compose form (recipient key and address, topic, body up to 16384 bytes) that calls the library's send-message wrapper,
+   checks the recipient's id after admission (3.4), and shows the reply or "not delivered".
+4. A messages view and its state in the host's store: newest first (network, sender key fingerprint, topic, time, preview, full
+   body as text), a badge and a tab-bar count, no system notifications, block by key, per-sender rate (default 10 a minute),
+   stored cap (default 1000, oldest dropped), kept only while the app is open (OM-18). A message is only displayed; no command is
+   executed from it (OM-16).
+5. Settings per network: receiving on or off (off by default), accepted sender types, the port, the advertised address.
+6. Checks: the conformance vectors of 4.3 against the library's reader the viewer uses; golden trials of the pure parts (accept
+   rules, block list, rate and cap); a written checklist for the window parts, as for the rest of the viewer.
+
 ## 5. Test-network use
 
 The test network `testnet/README.md` stage 3 has `sentinel` (24430), `edge1` to `edge3` (24431 to 24433), `bridge` (24401);
@@ -486,11 +513,19 @@ are running there.
 - Stage 3 edges and sentinel become senders and receivers: the node `node.role` gets the message start values and a handler
   that answers with a digest (the same as the c8 trial). `network.sh` is unchanged.
 - Checks to add to `testnet/run_all.sh`'s 50 TEMPUS checks: edge1 sends to edge2 and edge3 (descriptors obtained by
-  `sample` from the sentinel, as the existing checks already do); the sentinel sends to an edge (cross token type, if
-  OM-5 allows it); an edge sends to the bridge (the bridge application refuses by configuration unless OM-5 says
-  otherwise); a message to a stopped edge fails; a message to an unreachable address fails with no relay (nothing else in
+  `sample` from the sentinel, as the existing checks already do); the sentinel sends to an edge (cross token type; allowed by OM-5 when the edge's accepted set holds `tempus_sentinel`); an edge sends to the bridge (the bridge application refuses by configuration unless its accepted set holds the sender's type, OM-5); a message to a stopped edge fails; a message to an unreachable address fails with no relay (nothing else in
   the network learns of it, observed in the other nodes' output).
-- Stage 1 and 2 (the bridge and TRUST nodes) are not involved. The viewer's checks are not changed.
+- Stage 1 and 2 (the bridge and TRUST nodes) are not involved by messages. The viewer's existing checks (bridge calls) are not changed.
+- The viewer as a node (OM-9, OM-19): the viewer's key needs an edge token as well as its bridge pass, made by the test-only tool the
+  same way (the viewer's requirements, 4.9 and section 18), and the viewer must be admitted by the sentinel and shuffle into the edge
+  store so that an edge can learn its address by `sample`.
+- A node that messages the viewer: one stage 3 edge sends a message to the running viewer (descriptor from `sample`), with receiving
+  switched on and `tempus_edge` accepted in the viewer, and a check that the viewer shows it (by hand, from the viewer's window
+  checklist; the viewer's golden trials cover the accept rules). A refused case: the same message with receiving off or the sender
+  blocked, which the sending edge sees only as a closed connection.
+- The viewer sending to an edge: the viewer's compose form to an edge whose accepted set contains the viewer's token type; the edge's
+  digest handler answers and the viewer shows the reply. Also a send to a stopped edge, shown as "not delivered".
+- The loopback test network does not test NAT or the macOS incoming-connection prompt (OM-15, OM-17).
 - A positive "no relay" check: the bridge's output shows no message lines for a message between two edges.
 
 ## 6. Open questions for the owner
@@ -518,35 +553,40 @@ Each has options and a recommendation.
   accepted until configured. Reason: BEES already limits who may do what by type ("TRUST decides what a member may do",
   `documents/semp.md` as quoted in design section 7), and a bridge or sentinel that accepts messages from edges takes on
   edge-controlled load that today it takes only for `sample`/`call`.
-- OM-6. Duplicate suppression: application only (recommended) or a bounded library ring of recent `(peer id, id)` per node.
+- OM-6. **RULED 2026-11-24 by the owner: application only; the library keeps no ring of recent ids.** Duplicate suppression: application only (recommended) or a bounded library ring of recent `(peer id, id)` per node.
   The ring is state per peer, against the "no per-edge state" rule (design section 8).
-- OM-7. How an application finds recipients. Options: (a) only through `sample` replies and the descriptors of messages
+- OM-7. **RULED 2026-11-24 by the owner: (a) only through `sample` replies and the descriptors of messages received; no store-reading library call in v1.** How an application finds recipients. Options: (a) only through `sample` replies and the descriptors of messages
   received (nothing new); (b) a library call to read a store (today there is none: stores are reached over `tempus/1`
   only, `bees_tempus_peer.part:30-35`). Recommendation: (a) for v1.
-- OM-8. Per-peer rate and in-flight bounds on non-bridge nodes. Options: (a) none, node-wide bound only (v1); (b) a per-peer
+- OM-8. **RULED 2026-11-24 by the owner: (a) node-wide bounds only; per-sender limits are the application's, or a bridge's own table.** Per-peer rate and in-flight bounds on non-bridge nodes. Options: (a) none, node-wide bound only (v1); (b) a per-peer
   table at every node, as a bridge has. (b) breaks "no state per edge" and makes a table that an attacker with many valid
   tokens can fill (the answer in design 17.5 is the same: the limit is the producer's issuance). Recommendation: (a), the
   application keeps its own table; (b) only on nodes that choose to be bridges.
-- OM-9. Does the viewer send or receive messages? It is a client of the bridge only, and a browser cannot listen. Recommendation:
+- OM-9. **RULED 2026-11-24 by the owner: the viewer both sends and receives messages in v1. This overrides the recommendation below, whose premise (the viewer holds no identity) was wrong: it holds a key and a pass. Consequences (the viewer must listen, be reachable, what a received message does, what the person sees and approves) are open: see OM-16 to OM-19.** Does the viewer send or receive messages? (The question as asked: it was then taken to be a client of the bridge only that cannot listen.) Recommendation, overridden by the ruling above:
   no, not in v1: no inbound, and no outbound either, because the viewer holds no token and no TEMPUS identity in the
   current design (not verified against `TEMPUS-viewer-design.md`; check before ruling). If wanted later: outbound-only
   request/reply to a node that accepts the viewer's type.
-- OM-10. Spoofing. A message cannot be spoofed past admission: the sender is the key of the TLS certificate bound to the
+- OM-10. Spoofing. **RULED 2026-11-24 by the owner: (a) the connection and admission suffice; no per-message signature.** A message cannot be spoofed past admission: the sender is the key of the TLS certificate bound to the
   token and proved by the nonce signature (client guide section 6). The remaining risks are application-level (a
   peer with a valid token says what it likes, an `edge` token being cheap to obtain per 17.5). Options: add a per-message
   signature by the sender's key (non-repudiation, forwarding by others, though forwarding is ruled out); recommendation:
   no, the TLS channel and admission suffice for a direct message.
-- OM-11. Amplification. A reply can be larger than the request (up to 16384 bytes of `b` for a 1-byte request) but there are no
+- OM-11. Amplification. **RULED 2026-11-24 by the owner: (a) accept; reply ceiling equals message ceiling (16384).** A reply can be larger than the request (up to 16384 bytes of `b` for a 1-byte request) but there are no
   third parties to reflect to (direct, no `from`), and a TCP/TLS handshake must complete first, so source-address
   spoofing does not apply. Option: cap `reply_max` below `msg_max` (recommend equal, 16384). Recommendation: accept.
-- OM-12. Flooding. See 3.8: node-wide bounds, plus the application's own per-peer table. Question: are node-wide bounds
+- OM-12. Flooding. **RULED 2026-11-24 by the owner: (a) node-wide bounds are enough for v1; measure with a hostile sender in the matrix trial. The viewer also needs its own per-sender rate and stored-message cap (see OM-18).** See 3.8: node-wide bounds, plus the application's own per-peer table. Question: are node-wide bounds
   enough for an edge? Recommendation: yes for v1, measure in the matrix trial with a hostile sender.
 - OM-13. **RULED 2026-11-24 by the owner: 16384 bytes (message `b` and reply `b`).** Payload size ceiling: 16384 (recommended; below the 131072 frame ceiling so message memory at `inflight_max` 64 is
   64 x 16 KiB = 1 MiB, comparable to the stores' 1.2 MiB in design section 8). Alternatives: 4096, 65536.
-- OM-14. Topic `k`: an opaque byte string (recommended) or a registered atom set. Atoms need compile-time presence (D16), so
+- OM-14. Topic `k`: **RULED 2026-11-24 by the owner: an opaque byte string (1 to 32 bytes); no registry of atoms.** an opaque byte string (recommended) or a registered atom set. Atoms need compile-time presence (D16), so
   a registry would make every program list every topic.
-- OM-15. NAT (see 3.9): is outbound-only enough for the viewer's use, or does the owner want hole punching or a relay
+- OM-15. NAT (see 3.9): **RULED 2026-11-24 by the owner: NAT is not dealt with in v1. No hole punching, no relay; section 3.9 stays as the statement of the limit.** is outbound-only enough for the viewer's use, or does the owner want hole punching or a relay
   node? A relay is ruled out; hole punching is out of BEES's scope and I found no design for it.
+
+- OM-16. **RULED 2026-11-24 by the owner: a message received by the viewer is shown to the person** (a notice or an item in a messages view, with the sender's key and the topic). Nothing runs and no command is executed from a message. The accepted sender types are chosen by the person per network (empty by default, OM-5).
+- OM-17. **RULED 2026-11-24 by the owner: the viewer listens on a fixed port while the app is open** and receives nothing when it is closed. It is reachable only where its machine is reachable, and macOS asks the person to allow incoming connections.
+- OM-18. **RULED 2026-11-24 by the owner: accept the recommendation.** Messages view (newest first: network, sender key fingerprint, topic, time, preview; full body as text), badge and tab-bar count with no system notifications; receiving OFF by default and set per network; accepted sender types chosen per network (default none); block a sender by key; configurable per-sender rate (default 10 a minute) and stored cap (default 1000, oldest dropped); a compose form (recipient key and address, topic, body up to 16384 bytes) showing the reply or "not delivered"; messages kept only while the app is open. What the person sees and controls: the messages view, notices, per-network on/off for receiving, accepted sender types, blocking a sender, size of the stored history.
+- OM-19. **RULED 2026-11-24 by the owner: (a) the viewer joins gossip like an edge**: it asks a sentinel, is inserted into the edge store, and other nodes learn its address by shuffling. Consequences to carry into the requirements: the network owner issues the viewer an edge token for its key; the viewer runs the join and the shuffle timers and keeps the three stores; the viewer advertises a reachable `host:port` (editable, default the machine's LAN address and a configurable fixed port); the viewer's pass for a bridge and its edge token are both held. How a node learns the viewer's address and token: the viewer needs an advertised `host:port` and a token usable as a listener (requirements section 14 notes that `dial` requires an advertised `host:port`), and a way to join the node's stores or be handed out, so that other nodes can find it. This affects the requirements (the viewer is a listening node, not only a requester of a bridge) and the test network.
 
 ## 7. Risks and implementation plan
 
@@ -558,20 +598,27 @@ Risks:
    byte-identical.
 3. Silica's four-field record limit (SD-37) and the pinned compiler's copy cost (W2300) may force shapes (the `M` split is
    one such). A message record with a 16 KiB `b` copied per dispatch is within the stated 8 MiB budget for 64
-   connections only if copied a few times; not measured. Measure before ruling the ceiling (OM-13).
+   connections only if copied a few times; not measured. Measure the ceiling (ruled 16384, OM-13) in the c8 trial.
 4. Four implementations of one new frame: a divergence is likely without shared vectors; hence the ETF vector file first. Python's reader accepts keys in any order, so a strictness decision (OM-2) must be made before the vectors are frozen.
 5. NAT: users may expect delivery to every node; it will fail to some (3.9). The docs must say so.
 6. A change to the connection actor's `cfg` record ripples through the link part and generator (4.1 item 3, 7) and
    through every trial leaf that builds a node.
 7. Old goldens: any trial golden listing the frame kinds or the audit lines of an unknown kind is unaffected (the new
    kinds are opt-in by configuration), but the guide and design text change.
-8. I could not run anything (the network is in use by another agent) so all claims are from reading.
+8. The viewer listens (OM-17): a person's machine accepts incoming connections from the network while the app is open. Mitigations ruled:
+   receiving off by default, accepted sender types empty by default, block by key, a per-sender rate and a stored cap, nothing
+   executed from a message (OM-16, OM-18). Still a risk: a valid peer can fill the person's messages view up to the cap, and the
+   macOS firewall prompt and entitlements for a listener are untested (viewer requirements OI-21).
+9. The viewer as an edge needs an edge token from the network owner and real-clock token handling that BEES does not have for
+   sentinel or bridge (only the fixed test clock). Without them the viewer can join only a test network. (Viewer requirements OI-20, OI-22.)
+10. The viewer's advertised `host:port` is its own claim and may be wrong or unreachable (NAT, a changed LAN address): senders see only a failure (3.9).
+11. I could not run anything (the network is in use by another agent) so all claims are from reading.
 
 Ordered plan with rough sizes (S under a day, M a few days, L about a week; one engineer familiar with BEES):
 
 | Step | Work | Size |
 | --- | --- | --- |
-| 1 | Owner rulings on OM-1 to OM-5, OM-13; BEES design text: sections 5, 8, 16.2 rows, a new section on messages | S |
+| 1 | Owner rulings on OM-1 to OM-19 (done 2026-11-24); BEES design text: sections 5, 8, 16.2 rows, a new section on messages | S |
 | 2 | ETF vector file (4.3) regenerated with the Silica `encode((:etf), ...)` and compared with the Python writer's bytes; Python reference reader/builder first (fastest) | S |
 | 3 | Silica node: atoms, frame unit, `conn` kinds 15/16, `tn_request` arm, application op, start values, bounds, the answer timeout; trial leaf `t`-series for the node alone (a scripted Python sender) | L |
 | 4 | Python client: frames, dial, listener handler, tests, driver option | S |
@@ -580,7 +627,8 @@ Ordered plan with rough sizes (S under a day, M a few days, L about a week; one 
 | 7 | Silica client and peer part; `tools/bees_tempus_gen.py` if needed | M |
 | 8 | c8 matrix trial and goldens on the three platforms (Mac, Linux x86-64, Linux AArch64, as BEES records) | M |
 | 9 | Test network: handler in `node.role`, new checks in `run_all.sh`; docs (READMEs, writing-a-tempus-client.md) | S |
+| 10 | Viewer (this repository, after step 6 gives the Swift library its message frame and listener hook): listener, gossip as an edge, messages view, compose form, settings (4.5); edge token for the viewer's key in the test network (5) | L |
 
-Step 3 is the critical path and the only one that can break existing membership behaviour; steps 4 to 7 can run in parallel
+Step 10 depends on step 6 and on the viewer's own build; it does not change BEES. Step 3 is the critical path and the only one that can break existing membership behaviour; steps 4 to 7 can run in parallel
 after step 2. Total about three to four weeks of one person, less in parallel. These are estimates from line counts of the files named
 (the Swift `Frames.swift` is 280 lines, `Listener.swift` 243, the Silica `conn` unit 849), not from measurement.

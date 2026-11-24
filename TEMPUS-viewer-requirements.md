@@ -9,6 +9,11 @@ Revision 2026-11-24: after reading `project-bees` and `silica` the owner ruled o
 partly, OI-6, the network client, call arguments, the test network, passes, domain names, the compiler). Those
 rulings are folded into sections 2, 3, 4, 5, 14, 15 and 16.
 
+Revision 2026-11-24 (messages): the owner ruled OM-1 to OM-19 of `proposals/tempus-node-messages.md`. The viewer sends and
+receives node-to-node messages in version 1, so it is no longer only a client of a bridge: it listens while the app is
+open and joins gossip as an edge. The change is in sections 1.5, 2.7, 2.8, 4, 11, 13.1, 14, 16, 17 and the new section 18,
+and in open items OI-12 and OI-20 to OI-25.
+
 Wording: "must" is a requirement. "Should" is a strong preference that may be dropped with a reason. "The viewer" is
 the new native application, not a web browser.
 
@@ -21,6 +26,8 @@ the new native application, not a web browser.
 3. It is a general tool. No first application is chosen. Test applications are written as needed.
 4. Version 1 is for public networks, with admission as in section 4.
 5. Version 1 runs on macOS only.
+6. The viewer is also a TEMPUS node for messages (ruled 2026-11-24, OM-9 of the messages proposal): it sends a message
+   to another node and receives messages from other nodes, directly, peer to peer. Section 18 holds the requirements.
 
 ### 1.1 Rulings carried over from the design document
 
@@ -52,12 +59,15 @@ the new native application, not a web browser.
 7. Networking, TLS 1.3 with X25519MLKEM768, Ed25519 and admission are provided by the Swift TEMPUS client library
    in `project-bees/example_tempus_clients/swift` (`TempusClient`), used as it is. It must not be copied into this
    project. It is a dependency, built from its own place. Bugs found in it are fixed there, in the BEES project.
-   The viewer is an ordinary edge peer and needs no new kind of token and no change to admission.
+   For bridge requests the viewer is an admitted edge and needs no new kind of token and no change to admission. For
+   messages it is also a listening node (section 18): it holds an edge token in addition to its bridge pass, and the
+   library's listener and gossip peer are used in the app. The viewer is not a client only.
    Silica actors drive it through the Swift host and the FFI workers of requirement 2.2: a request actor casts a
    request to an FFI worker, which calls the library and casts the outcome back.
 8. The viewer must be built from separate responsibilities at least along these lines (names are indicative):
    network store, key store, address parsing, request sending, reply checking, render assembly, tab, history, kept
-   copies, window, event listening, refresh timers.
+   copies, window, event listening, refresh timers, and for messages (section 18): listener, gossip membership, message
+   sending, message store, block list.
 9. Toolchain (ruled 2026-11-24, replacing the earlier "latest link" wording): the viewer, the bridge, the TRUST nodes
    and the TEMPUS nodes of the test network are built with the compiler binaries published in the releases of the
    public Silica repository (https://github.com/Silica-Language-and-Compiler/silica/releases), not with a compiler from
@@ -92,9 +102,11 @@ the new native application, not a web browser.
    Erlang external term format (ETF), as BEES encodes everything. It never holds a private key. It holds the network's
    producer key, a label, one or more bridge hosts with ports, and the pass. The person supplies what the network owner publishes outside the
    network (the producer's key, a label, and the host or hosts). The person gives the network a name.
-3. The viewer holds one Ed25519 key per network. Keys are made by the viewer.
+3. The viewer holds one Ed25519 key per network. Keys are made by the viewer. The same key serves both roles: the
+   bridge pass and the edge token of section 18 are both issued for it.
 4. Admission is by a per-person pass. The viewer shows the public half of the key for that network so the person
    can send it to the network owner. The owner returns a pass signed for that key. The person imports it.
+   The owner also issues an edge token for the same key if the person is to join gossip and receive messages (section 18.3).
    For now, passes are test-only: a test tool signs a pass for the viewer's own key with BEES's fixed test producer seed
    (requirement 4.9). No tool for issuing real passes is built in this phase, and the test passes must never be
    treated as real ones.
@@ -102,12 +114,13 @@ the new native application, not a web browser.
    person before it expires, and say plainly when it has expired and offer the import step again.
 6. Automatic renewal of a pass, a guest tier, and an open token endpoint are not in version 1. Networks that want
    public access publish the means of getting a pass outside the network.
-7. Private keys must be stored in the macOS Keychain.
+7. Private keys must be stored in the macOS Keychain. One seed per network serves the key for requests and the key for
+   messages and gossip; no second key is made.
 8. State is separate for each network, with no exception.
 9. Test passes (ruled 2026-11-24, replacing the earlier "fixed test key" mode). The viewer always uses the key it made
    and keeps in the Keychain, in test builds too. A pass for that key is made by a separate test-only tool, which
    signs it with BEES's fixed test producer seed, using the Swift client library's public calls (`tokenPayload` and
-   `SigningKey.sign`). The viewer therefore holds no test key and no test switch. The tool must live outside the
+   `SigningKey.sign`). The same tool signs the edge token for the viewer's key (section 18.3). The viewer therefore holds no test key and no test switch. The tool must live outside the
    viewer's build, and a production build of the viewer must not contain it or the test producer seed. A check (as in
    BEES's `production-check`) must show that.
 
@@ -239,9 +252,16 @@ Every limit in this table must be a configuration value, not a constant in the c
 | Automatic requests for one render | 20 |
 | Parts loading at once per tab | 4 |
 | Default port | 481 |
+| Message payload and reply body (`b`) | 16,384 bytes (the protocol ceiling; a lower value may be configured) |
+| Message topic | 1 to 32 bytes (protocol bounds; fixed) |
+| Messages accepted per sender per minute | 10 |
+| Stored messages | 1,000 (oldest dropped) |
+| Listening port | fixed, configurable (no starting value chosen: OI-23) |
 
 The viewer must check these against the configuration at the point of use. There is no limit on the number of tabs for now (ruled 2026-11-24). Section 15 lists limits not yet given values
-(requests per interval).
+(requests per interval). The messaging limits above are node-wide or per-sender limits of the viewer's own; the node-wide
+bounds of the library (messages handled at once, messages per interval) are start values of the library and are also
+configurable.
 
 ## 12. Keeping, history and tabs
 
@@ -271,6 +291,11 @@ Version 1 includes, as standard Mac behaviour:
 2. A network list window to add a network by importing a file, name it, and see key fingerprints and pass expiry.
 3. The menu bar and keyboard shortcuts (new tab, close tab, reload, back, forward, copy).
 4. Find in page: a search of the text of the current screen.
+5. A messages view (section 18.5), reached from the sidebar of the application window or its tab bar, with a badge showing the
+   number of unread messages. There are no system notifications.
+6. Settings: per network, receiving messages on or off (off by default), accepted sender types, the listening port, the
+   advertised address, the rate and the stored cap (section 18.6). The settings are in the network list window or the
+   application's settings window; which one is open (OI-7).
 
 The exact menus and shortcut keys are still to be written down.
 
@@ -286,12 +311,14 @@ The exact menus and shortcut keys are still to be written down.
    the commands and prints what it would display and do. It also measures the time of real requests, one at a time
    and several in turn, and of image parts. Its numbers decide connection reuse (section 5.8) and the part size
    (section 8.4).
-5. **Test network.** The viewer, the command-line trial and the window checks run against a test network built
+5. **Messages.** The conformance vectors of the messages proposal (`proposals/tempus-node-messages.md` 4.3) are run against the
+   library reader the viewer uses. The accept rules, block list, rate and stored cap are tested as golden trials. See 18.9.
+6. **Test network.** The viewer, the command-line trial and the window checks run against a test network built
    from BEES and the Silica compiler: one bridge, several TRUST nodes and several TEMPUS nodes. The TRUST nodes
    export the functions that return commands, and one of them decides each published name's mark (requirement
    5.2). The bridge's configuration is compiled in for now, as BEES does today, so changing a token, a whitelist
-   entry or a permission means a rebuild. The network uses BEES's test-only keys and passes (requirement 4.4), and the viewer's own key is given a pass by the test-only tool
-   (requirement 4.9). The
+   entry or a permission means a rebuild. The network uses BEES's test-only keys and passes (requirement 4.4), and the viewer's own key is given a pass and an edge token by the test-only tool
+   (requirements 4.9 and 18.3). The
    model for it is `project-bees/trials/c3_tempus_bridge` (a TRUST node, two bridges, and clients).
 
 ## 15. Open items (not requirements)
@@ -358,7 +385,8 @@ These were not ruled and must be decided before or during the build.
   file-based login keychain (worked) or the data-protection keychain (refused for an unsigned build, -34018), which
   depends on code signing; and access from a rebuilt or re-signed binary, untested. Also found: the library's
   `dial` requires the dialer to carry an advertised `host:port`, and a test pass for the viewer's own key can be made
-  from the library's public calls, which is how requirement 4.9 now works.
+  from the library's public calls, which is how requirement 4.9 now works. Since the messages ruling this matters for the
+  listener as well: the viewer's advertised `host:port` is what other nodes dial (section 18.4).
 - OI-13. ANSWERED 2026-11-24 by the spike in `spikes/oi-13`: yes. The Silica program's entry symbol is `main`
   (no underscore), so it links into a Swift executable and runs on a thread the host creates, while a SwiftUI
   application keeps the main thread. Events reach Silica through a blocking FFI worker that reads a C queue (no call
@@ -379,19 +407,147 @@ These were not ruled and must be decided before or during the build.
   refuses at 3 or more connections at once; the owner decides.
 - OI-10. RULED 2026-11-24: they live in this project (requirement 6.4).
 
+- OI-20. OPEN (found 2026-11-24 while folding in the messages rulings): real-clock tokens for nodes. BEES has no real clock for
+  a sentinel or bridge, only the fixed test clock driven by `clock` frames (messages proposal 3.10; not verified beyond that
+  document). The viewer's edge token and bridge pass are judged by other nodes' clocks, so on a real network the expiry of the
+  edge token is not judged until BEES has one. Until then the viewer can join only a test network.
+- OI-21. OPEN: the macOS firewall and the incoming-connection prompt, and the entitlements (App Sandbox network server
+  entitlement, code signing) that a listening app needs. OM-17 says macOS asks the person to allow incoming connections; none of
+  this has been tried. It needs a spike like OI-12 and OI-13, and depends on how the app is signed (OI-12).
+- OI-22. OPEN: how the viewer gets an edge token in a real network. For now a test tool signs it (requirement 18.3). A real
+  network owner has no tool for it (the same gap as for passes, OI-6), and the form in which the person sends the key and
+  receives the token, and the token's lifetime, are not decided. Whether the edge token and the bridge pass may be one file
+  to import is not decided.
+- OI-23. OPEN: use of the Swift library's listener and gossip peer inside the app: which library calls start and stop the
+  listener and the peer, how their threads and the shuffle timers fit with the SwiftUI main thread and the Silica FFI workers
+  (requirement 2.4), the default fixed port, how the LAN address is found and kept up to date when the machine's network
+  changes, and what happens at sleep and wake. Not tried.
+- OI-24. OPEN, BEES work: the message frame (kinds 15 and 16), the connection actor changes, the node's application message,
+  and the Swift library's send-message wrapper and listener handler hook, as in `proposals/tempus-node-messages.md` sections 4.1
+  and 4.2. Nothing is built. The viewer's messaging cannot be built until the Swift part exists. Also not yet fixed: the
+  library's own node-wide bounds and their start values.
+- OI-25. OPEN: changes to the test network so a node can message the viewer: an edge token for the viewer's key, a sentinel and
+  edges that run the message handler, and checks of both directions (messages proposal section 5). The viewer's listener must
+  be reachable from the test network's nodes on the same machine (loopback or the LAN address), which also needs OI-23.
+
 ## 16. Dependencies on other work
 
 - BEES (`/Users/yenrab/project-bees`): the Swift TEMPUS client library, used in place and not copied; the update of
   its `callFrame` (requirement 5.10); fixes to it as bugs are found; the bridge, TRUST and TEMPUS nodes for the test
-  network; and any change that OI-3 or OI-5 requires.
+  network; and any change that OI-3 or OI-5 requires; and the message frame, the Swift send-message wrapper and listener
+  handler hook, and the test network changes for messages (OI-24, OI-25).
 - Silica (https://github.com/Silica-Language-and-Compiler/silica): FFI to a C interface (present in
   `trials/ffi_addition`), actors, supervisors, and the compiler binaries from its releases (requirement 2.9).
-- A Swift host with a C interface for the window, the controls and the Keychain, linked with the Swift client
-  library.
-- Network owners who publish names with marks and publish passes outside the network.
+- A Swift host with a C interface for the window, the controls, the Keychain, the listener and the messages, linked with
+  the Swift client library.
+- Network owners who publish names with marks, publish passes outside the network, and issue edge tokens to viewers
+  that are to receive messages.
 
 ## 17. Out of scope for version 1
 
 Other platforms, audio and video, live subscriptions, stored values, actions on the person's machine, appearance
 control, editing in place, bridge discovery, automatic pass renewal, guest access, a naming service, and any link
-scheme other than `tempus://`.
+scheme other than `tempus://`. For messages: NAT traversal, relay or store-and-forward (nothing carries a message for a
+sender), receiving while the app is closed, keeping messages after the app quits, system notifications, a per-message
+signature, group messages, connection reuse and a persistent channel, commands carried by messages, and carriers other than
+TLS 1.3 over TCP.
+
+## 18. Messages (ruled 2026-11-24)
+
+Source: the rulings OM-1 to OM-19 in `proposals/tempus-node-messages.md`, which holds the wire definition. Nothing here is
+built, and the BEES side is not built either (OI-24).
+
+### 18.1 Sending
+
+1. The viewer must be able to send one message to one node: a message names the recipient's key (its peer id, the SHA-512 of its
+   public key), carries a topic (opaque bytes, 1 to 32) and a body (0 to 16,384 bytes), and is sent through the Swift library on
+   its own TLS 1.3 connection. It is one message per connection: one request and one reply, then close.
+2. After admission the viewer must check that the connected node's id is the recipient's id, and close without sending if it
+   is not.
+3. The person sends by a compose form: recipient key and address, topic, body. The form shows the reply, or "not delivered".
+   "Not delivered" is all the viewer can say, because a refusal, a dead address and a timeout look the same.
+4. The recipient is found from the replies to a sample request and from the descriptors of messages received. There is no
+   directory and no store reading call. The person may also type a key and address.
+5. A message is never sent automatically, on a timer or from a command in a reply. It is sent only when the person acts.
+   Nothing is relayed or stored for later delivery.
+
+### 18.2 Receiving and the listener
+
+1. While the app is open and receiving is on for at least one network, the viewer must listen on a fixed port (configurable)
+   (OM-17). It must stop listening when the app quits, and it receives nothing then.
+2. Receiving is off by default, set per network. With receiving off for a network the viewer refuses every message for it
+   by closing without a reply.
+3. The accepted sender types are chosen by the person per network, none by default. Any admitted peer may try to send; the
+   viewer's accepted set decides (OM-5).
+4. A sender may be blocked by key. A message from a blocked key is refused by closing.
+5. A per-sender rate (default 10 a minute) applies, and a message over it is refused. These are the viewer's own limits; the
+   library's node-wide bounds apply as well (OM-8, OM-12).
+6. The viewer must check a received message against the protocol's bounds (a map of the fixed keys in name order, topic 1 to 32
+   bytes, body up to 16,384 bytes, `to` equal to its own id) and refuse one that fails, by closing with no reply.
+7. The viewer replies to a message with an empty body as acknowledgement, unless the owner rules otherwise. It does
+   not deduplicate by library; if it shows the same message twice because of a retry, that is how it behaves (OM-6).
+8. No message is delivered while the viewer is closed. NAT and a closed firewall make the viewer unreachable, and v1 does nothing
+   about that (OM-15).
+
+### 18.3 Gossip membership and the edge token
+
+1. The viewer joins gossip as an edge (OM-19): it asks a sentinel, is inserted into the edge store, and other nodes learn its
+   address by shuffling. It runs the join and the shuffle timers and keeps the three stores through the Swift library.
+2. The viewer's key needs an edge token, issued by the network owner for that key, in addition to its bridge pass. Both are held.
+   The network list shows the expiry of both. The viewer must warn before the edge token expires, as for a pass (requirement 4.5).
+3. In the test network the edge token is signed for the viewer's own key by the test-only tool of requirement 4.9, with the
+   test producer seed, and must not appear in a production build.
+4. The viewer joins gossip only for a network that has a sentinel in its network file (whether it also requires receiving to be on is not ruled).
+   The network file's layout for a sentinel and an edge token is not yet written (OI-6, OI-22).
+
+### 18.4 Advertised address
+
+1. The viewer advertises one `host:port` that other nodes dial. The person may edit it. Its default is the machine's LAN
+   address and the configured fixed port.
+2. The advertised address is a claim. The viewer must show it, say that it may be unreachable, and say that the viewer cannot
+   tell whether it is reachable (no NAT handling in v1, OM-15).
+
+### 18.5 Messages view
+
+1. A messages view lists received messages newest first: network, sender key fingerprint, topic, time, and a preview. A message
+   opens to show the full body as text.
+2. A badge and a count in the tab bar or sidebar show unread messages. There are no system notifications.
+3. The body is shown as plain text only. It is never interpreted: no link in it is followed or opened for the person, no
+   `tempus://` address in it is opened automatically, and no image or markup is drawn.
+4. Messages are kept in memory only, while the app is open (OM-18). At most the stored cap (default 1,000) are kept; the oldest
+   is dropped. Nothing is written to disk.
+5. From a message the person may block its sender's key, or start a reply in the compose form with the sender's descriptor, which
+   is usable only if its address works (3.4 of the proposal).
+
+### 18.6 Controls
+
+Per network: receiving on or off (default off), accepted sender types (default none), the blocked keys. For the viewer: the
+listening port, the advertised address, the per-sender rate, and the stored cap. All of these are configuration values
+(section 11), and the rate and the cap are limits of section 11.
+
+### 18.7 Security posture
+
+1. A message is data to show. No command is executed from a message (OM-16, requirement R3). A message holds no
+   command vocabulary, and the viewer must not pass a message body to the command checker or to the address parser.
+2. Admission is the only authentication. A message has no signature of its own (OM-10). The sender shown is the key proved by
+   admission, and the viewer shows its fingerprint and no name the sender chose.
+3. The listener is open only while the app is open, only for networks with receiving on, and refuses by closing with no reason.
+4. A flood is limited by the per-sender rate, the stored cap, the library's node-wide bounds and the connection deadline. A
+   peer with many valid tokens can still fill the view up to the cap.
+5. A message received from one network is shown under that network and never changes state of another (requirement 4.8).
+
+### 18.8 Consequences elsewhere
+
+- Application shell: the messages view and badge, the settings (requirement 13.1, items 5 and 6).
+- Keychain: one seed per network serves both roles (requirements 4.3 and 4.7).
+- Test passes: the test tool also signs an edge token for the viewer's key (requirement 4.9).
+- Architecture: a listener and a gossip peer in the Swift host, with the message store in the host's observable state (2.3,
+  2.8). They must not block a window (2.6).
+
+### 18.9 Conformance and verification
+
+1. The vectors of `proposals/tempus-node-messages.md` section 4.3 (valid and refused, keys out of order refused) are run
+   against the reader the viewer uses, and the viewer's builder produces the bytes of V1 to V4 for the same inputs.
+2. The accept rules, the block list, the per-sender rate and the stored cap are golden trials of the Silica or Swift part that holds them.
+3. The window parts (messages view, compose form, settings) are on the written checklist of 14.3.
+4. The test network of 14.6 has a node that sends the viewer a message and the viewer sends to an edge (proposal section 5).
