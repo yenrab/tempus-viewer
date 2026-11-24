@@ -91,18 +91,21 @@ the new native application, not a web browser.
 3. The viewer holds one Ed25519 key per network. Keys are made by the viewer.
 4. Admission is by a per-person pass. The viewer shows the public half of the key for that network so the person
    can send it to the network owner. The owner returns a pass signed for that key. The person imports it.
-   For now, passes are the test-only tokens that BEES makes from fixed seeds (`tools/bees_tempus_ids.py`). No tool
-   for issuing real passes is built in this phase, and the test passes must never be treated as real ones.
+   For now, passes are test-only: a test tool signs a pass for the viewer's own key with BEES's fixed test producer seed
+   (requirement 4.9). No tool for issuing real passes is built in this phase, and the test passes must never be
+   treated as real ones.
 5. The pass lifetime is judged by the bridge on its own clock. The viewer must record each pass's expiry, warn the
    person before it expires, and say plainly when it has expired and offer the import step again.
 6. Automatic renewal of a pass, a guest tier, and an open token endpoint are not in version 1. Networks that want
    public access publish the means of getting a pass outside the network.
 7. Private keys must be stored in the macOS Keychain.
 8. State is separate for each network, with no exception.
-9. Test mode. Because a pass is signed for one key and the test passes come from fixed test keys, a test build may load
-   a fixed test key in place of the Keychain key. This switch must live in a unit that only test builds list, as BEES's
-   test frames do. A production build must not contain it, and a check (as in BEES's `production-check`) must show
-   that it does not.
+9. Test passes (ruled 2026-11-24, replacing the earlier "fixed test key" mode). The viewer always uses the key it made
+   and keeps in the Keychain, in test builds too. A pass for that key is made by a separate test-only tool, which
+   signs it with BEES's fixed test producer seed, using the Swift client library's public calls (`tokenPayload` and
+   `SigningKey.sign`). The viewer therefore holds no test key and no test switch. The tool must live outside the
+   viewer's build, and a production build of the viewer must not contain it or the test producer seed. A check (as in
+   BEES's `production-check`) must show that.
 
 ## 5. Requests
 
@@ -280,7 +283,7 @@ The exact menus and shortcut keys are still to be written down.
    from BEES and the Silica compiler: one bridge, several TRUST nodes and several TEMPUS nodes. The TRUST nodes
    export the functions that return commands, and one of them decides each published name's mark (requirement
    5.2). The bridge's configuration is compiled in for now, as BEES does today, so changing a token, a whitelist
-   entry or a permission means a rebuild. The network uses BEES's test-only keys and passes (requirement 4.4), and the test build uses the fixed test key
+   entry or a permission means a rebuild. The network uses BEES's test-only keys and passes (requirement 4.4), and the viewer's own key is given a pass by the test-only tool
    (requirement 4.9). The
    model for it is `project-bees/trials/c3_tempus_bridge` (a TRUST node, two bridges, and clients).
 
@@ -320,9 +323,14 @@ These were not ruled and must be decided before or during the build.
     window keeps its display and history. The spike must show that this holds.
   - Menus and shortcuts: SwiftUI `commands`.
   Any control that the spike shows SwiftUI cannot supply is added to requirement 2.3's list of wrappers.
-- OI-12. Whether an Ed25519 key can be held in the macOS Keychain in a form the Swift library's OpenSSL
-  client certificate can use. The likely route is a stored raw key. This is unverified and is a spike of the
-  first build step.
+- OI-12. ANSWERED 2026-11-24 by the spike in `spikes/oi-12`: yes. Security.framework has no Ed25519 key type, so the
+  key is kept as its 32-byte seed in a generic password item, and the library builds its identity and certificate
+  from the seed in memory. Shown: the seed round-trips through the Keychain, CryptoKit and OpenSSL agree on the key,
+  and a real TLS 1.3 handshake and admission succeed with the Keychain-held key. Still open: whether to use the
+  file-based login keychain (worked) or the data-protection keychain (refused for an unsigned build, -34018), which
+  depends on code signing; and access from a rebuilt or re-signed binary, untested. Also found: the library's
+  `dial` requires the dialer to carry an advertised `host:port`, and a test pass for the viewer's own key can be made
+  from the library's public calls, which is how requirement 4.9 now works.
 - OI-13. ANSWERED 2026-11-24 by the spike in `spikes/oi-13`: yes. The Silica program's entry symbol is `main`
   (no underscore), so it links into a Swift executable and runs on a thread the host creates, while a SwiftUI
   application keeps the main thread. Events reach Silica through a blocking FFI worker that reads a C queue (no call
