@@ -1,0 +1,17 @@
+link_library: "viewer_host"
+
+wrapper viewer_next_event {
+    symbol: "viewer_next_event"
+    result: "struct"
+    error_domain: "dangerous_viewer_host"
+}
+
+wrapper viewer_post {
+    symbol: "viewer_post"
+    result: "struct"
+    error_domain: "dangerous_viewer_host"
+    arguments: [
+        { name: "text_ptr", lifetime: "borrowed", retain: false },
+        { name: "text_len", role: "length", length_of: "text_ptr" }
+    ]
+}

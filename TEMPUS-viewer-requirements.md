@@ -43,9 +43,10 @@ the new native application, not a web browser.
    casts commands to the host, the host changes that state on the main thread, and the views redraw from it. No
    code builds or edits a view directly. Where SwiftUI lacks a needed control, the host may wrap one native control
    inside SwiftUI, and each such wrapper must be listed in this document with its reason.
-4. Events (clicks, keystrokes, window changes) travel from the Swift host into Silica by calls to a C entry point.
-   Each becomes a cast to a supervised listener actor. The host never waits for a reply. A failed listener must be
-   restarted by its supervisor.
+4. Events (clicks, keystrokes, window changes) travel from the Swift host into Silica without any call into the Silica
+   runtime. The host pushes each event onto a queue in its C layer. A Silica FFI worker blocks in a C function that
+   takes the next event from that queue, casts it to a supervised listener actor, and asks itself again. The host
+   never waits for a reply. A failed listener must be restarted by its supervisor. (Shown by the OI-13 spike.)
 5. Drawing travels the other way. A window actor casts a command to an FFI worker, which passes it to the host.
 6. Network work must never freeze a window.
 7. Networking, TLS 1.3 with X25519MLKEM768, Ed25519 and admission are provided by the Swift TEMPUS client library
@@ -322,9 +323,14 @@ These were not ruled and must be decided before or during the build.
 - OI-12. Whether an Ed25519 key can be held in the macOS Keychain in a form the Swift library's OpenSSL
   client certificate can use. The likely route is a stored raw key. This is unverified and is a spike of the
   first build step.
-- OI-13. Whether the Swift host can own the main thread and the AppKit run loop while a Silica runtime runs
-  beside it, with a Swift-to-Silica entry that casts an event to an actor. The host is a SwiftUI application, whose
-  `App` entry point starts the run loop. The FFI trials show only Silica calling C. This is the first spike.
+- OI-13. ANSWERED 2026-11-24 by the spike in `spikes/oi-13`: yes. The Silica program's entry symbol is `main`
+  (no underscore), so it links into a Swift executable and runs on a thread the host creates, while a SwiftUI
+  application keeps the main thread. Events reach Silica through a blocking FFI worker that reads a C queue (no call
+  into the runtime is needed), and commands reach Swift through an FFI worker that calls a C function, which calls
+  a Swift handler. 200 round trips through three actors and two FFI workers: median 0.158 ms, maximum 1.6 ms. A
+  burst of 5000 events came back complete and in order. Not yet shown: a real mouse click, a failing actor being
+  restarted inside the embedded process, and an orderly shutdown. Silica's fault handler takes every fatal signal
+  and exits with 70, so macOS writes no crash report (the spike's README lists the details).
 - OI-7. RULED in part 2026-11-24: the application shell is in section 13.1. Still open: the exact menus and
   shortcut keys, the window layout, and the tests for the Swift C interface.
 - OI-8. SETTLED 2026-11-24: the scheme is `tempus` and is the only link type allowed.

@@ -1,0 +1,9 @@
+module hello;
+
+fn main() -> int64 {
+    sequence proc[device_io]
+        println("hello from silica")
+    produces
+        pure 0
+    end
+}
