@@ -57,10 +57,12 @@ the new native application, not a web browser.
 8. The viewer must be built from separate responsibilities at least along these lines (names are indicative):
    network store, key store, address parsing, request sending, reply checking, render assembly, tab, history, kept
    copies, window, event listening, refresh timers.
-9. Toolchain: the viewer, the bridge, the TRUST nodes and the TEMPUS nodes of the test network are built with the
-   compiler that the link `silica/binaries/silica-compiler` names, and that link is always taken as the latest
-   compiler found. No version is pinned in this project. The Swift host builds with the installed Swift and the
-   installed OpenSSL (4.1.0 or later, as `project-bees/contract/what-is-required-to-use.md` requires).
+9. Toolchain (ruled 2026-11-24, replacing the earlier "latest link" wording): the viewer, the bridge, the TRUST nodes
+   and the TEMPUS nodes of the test network are built with the compiler binaries published in the releases of the
+   public Silica repository (https://github.com/Silica-Language-and-Compiler/silica/releases), not with a compiler from
+   a local checkout. The latest release is the one to use unless a ruling says otherwise, and no version is pinned
+   in this project. The Swift host builds with the installed Swift and the installed OpenSSL (4.1.0 or later, as
+   BEES's `contract/what-is-required-to-use.md` requires).
 
 ## 3. Addresses and links
 
@@ -335,8 +337,8 @@ These were not ruled and must be decided before or during the build.
 - BEES (`/Users/yenrab/project-bees`): the Swift TEMPUS client library, used in place and not copied; the update of
   its `callFrame` (requirement 5.10); fixes to it as bugs are found; the bridge, TRUST and TEMPUS nodes for the test
   network; and any change that OI-3 or OI-5 requires.
-- Silica (`/Users/yenrab/silica`): FFI to a C interface (present in `trials/ffi_addition`), actors, supervisors, and
-  the compiler named by `binaries/silica-compiler`, always the latest found (requirement 2.9).
+- Silica (https://github.com/Silica-Language-and-Compiler/silica): FFI to a C interface (present in
+  `trials/ffi_addition`), actors, supervisors, and the compiler binaries from its releases (requirement 2.9).
 - A Swift host with a C interface for the window, the controls and the Keychain, linked with the Swift client
   library.
 - Network owners who publish names with marks and publish passes outside the network.
