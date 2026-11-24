@@ -1,7 +1,7 @@
-# TEMPUS browser: requirements
+# TEMPUS viewer: requirements
 
 Status: first draft, written 2026-11-23 from an interview with the owner. It follows
-`TEMPUS-browser-design.md` (the design notes, which hold the options considered and the BQ numbers cited here). Every
+`TEMPUS-viewer-design.md` (the design notes, which hold the options considered and the BQ numbers cited here). Every
 requirement below was either ruled by the owner in the interview or is a stated consequence of a ruling. Where the
 owner has not ruled, the item is in section 15 and is not a requirement.
 
@@ -9,14 +9,14 @@ Revision 2026-11-24: after reading `project-bees` and `silica` the owner ruled o
 partly, OI-6, the network client, call arguments, the test network, passes, domain names, the compiler). Those
 rulings are folded into sections 2, 3, 4, 5, 14, 15 and 16.
 
-Wording: "must" is a requirement. "Should" is a strong preference that may be dropped with a reason. "The browser" is
+Wording: "must" is a requirement. "Should" is a strong preference that may be dropped with a reason. "The viewer" is
 the new native application, not a web browser.
 
 ## 1. Purpose and scope
 
-1. The TEMPUS browser is a native macOS application, written in Silica, that a person uses to visit places on TEMPUS
+1. The TEMPUS viewer is a native macOS application, written in Silica, that a person uses to visit places on TEMPUS
    networks. It does not use HTTP or HTTPS.
-2. It sends a request to a bridge. The reply is a list of commands. The browser carries the commands out as native
+2. It sends a request to a bridge. The reply is a list of commands. The viewer carries the commands out as native
    macOS controls.
 3. It is a general tool. No first application is chosen. Test applications are written as needed.
 4. Version 1 is for public networks, with admission as in section 4.
@@ -26,12 +26,12 @@ the new native application, not a web browser.
 
 - R1. The unit is a command, not a page.
 - R2. One render may be built from more than one request. The frame size therefore does not limit a render.
-- R3. No reply holds code. A command is data that selects a behaviour the browser already has. No command carries a
+- R3. No reply holds code. A command is data that selects a behaviour the viewer already has. No command carries a
   condition, loop, expression, template with logic or reference to code to load.
 
 ## 2. Architecture
 
-1. The browser is a Silica application designed to Silica principles: a root supervisor, a supervision tree of
+1. The viewer is a Silica application designed to Silica principles: a root supervisor, a supervision tree of
    whatever depth suits, many actors each with one responsibility, and `cast` in preference to `call` wherever
    possible.
 2. Windowing and drawing use SwiftUI (ruled 2026-11-24), not the older imperative, object-oriented approach of
@@ -51,23 +51,23 @@ the new native application, not a web browser.
 7. Networking, TLS 1.3 with X25519MLKEM768, Ed25519 and admission are provided by the Swift TEMPUS client library
    in `project-bees/example_tempus_clients/swift` (`TempusClient`), used as it is. It must not be copied into this
    project. It is a dependency, built from its own place. Bugs found in it are fixed there, in the BEES project.
-   The browser is an ordinary edge peer and needs no new kind of token and no change to admission.
+   The viewer is an ordinary edge peer and needs no new kind of token and no change to admission.
    Silica actors drive it through the Swift host and the FFI workers of requirement 2.2: a request actor casts a
    request to an FFI worker, which calls the library and casts the outcome back.
-8. The browser must be built from separate responsibilities at least along these lines (names are indicative):
+8. The viewer must be built from separate responsibilities at least along these lines (names are indicative):
    network store, key store, address parsing, request sending, reply checking, render assembly, tab, history, kept
    copies, window, event listening, refresh timers.
-9. Toolchain: the browser, the bridge, the TRUST nodes and the TEMPUS nodes of the test network are built with the
+9. Toolchain: the viewer, the bridge, the TRUST nodes and the TEMPUS nodes of the test network are built with the
    compiler that the link `silica/binaries/silica-compiler` names, and that link is always taken as the latest
    compiler found. No version is pinned in this project. The Swift host builds with the installed Swift and the
    installed OpenSSL (4.1.0 or later, as `project-bees/contract/what-is-required-to-use.md` requires).
 
 ## 3. Addresses and links
 
-1. The only link scheme the browser accepts is `tempus://`. Every other scheme must be refused, wherever it appears:
+1. The only link scheme the viewer accepts is `tempus://`. Every other scheme must be refused, wherever it appears:
    in the address entry, in a command, in a pasted link, and in a request from the operating system.
 2. The form is `tempus://host[:port]/name?arguments`.
-3. The host is a domain name or an IP address, and both must work. It identifies one specific bridge. The browser
+3. The host is a domain name or an IP address, and both must work. It identifies one specific bridge. The viewer
    connects to that host and port, resolving a domain name in the Swift host (the library uses `getaddrinfo`). There
    is no discovery of other bridges in version 1.
 4. `name` is a name that the network owner published. The application maps it to a function. Raw module and
@@ -79,18 +79,18 @@ the new native application, not a web browser.
 
 ## 4. Networks, keys and passes
 
-1. The browser may contact a host only for a network the person has added. A link to a host that belongs to no
+1. The viewer may contact a host only for a network the person has added. A link to a host that belongs to no
    added network must produce a clear message that the network has not been added, and no connection is made.
-2. Adding a network is a step in the browser, and the person does it by importing a file. The file is in the
+2. Adding a network is a step in the viewer, and the person does it by importing a file. The file is in the
    Erlang external term format (ETF), as BEES encodes everything. It never holds a private key. It holds the network's
    producer key, a label, one or more bridge hosts with ports, and the pass. The person supplies what the network owner publishes outside the
    network (the producer's key, a label, and the host or hosts). The person gives the network a name.
-3. The browser holds one Ed25519 key per network. Keys are made by the browser.
-4. Admission is by a per-person pass. The browser shows the public half of the key for that network so the person
+3. The viewer holds one Ed25519 key per network. Keys are made by the viewer.
+4. Admission is by a per-person pass. The viewer shows the public half of the key for that network so the person
    can send it to the network owner. The owner returns a pass signed for that key. The person imports it.
    For now, passes are the test-only tokens that BEES makes from fixed seeds (`tools/bees_tempus_ids.py`). No tool
    for issuing real passes is built in this phase, and the test passes must never be treated as real ones.
-5. The pass lifetime is judged by the bridge on its own clock. The browser must record each pass's expiry, warn the
+5. The pass lifetime is judged by the bridge on its own clock. The viewer must record each pass's expiry, warn the
    person before it expires, and say plainly when it has expired and offer the import step again.
 6. Automatic renewal of a pass, a guest tier, and an open token endpoint are not in version 1. Networks that want
    public access publish the means of getting a pass outside the network.
@@ -106,28 +106,28 @@ the new native application, not a web browser.
 1. A request is made with `call` through a bridge, using the existing BEES protocol.
 2. Every published name carries one of two marks: look-only or does-something. The mark is sent by the bridge. The
    decision is made in a TRUST node behind the bridge, not in the bridge. The bridge never decides it. (How and when
-   the mark reaches the browser relative to a request is open: OI-3.)
-3. A link from outside the browser (pasted, from another application) may open only a look-only name. A
+   the mark reaches the viewer relative to a request is open: OI-3.)
+3. A link from outside the viewer (pasted, from another application) may open only a look-only name. A
    does-something name must refuse to run from an outside link, and runs only when the person acts inside the
-   browser, for example by pressing a button.
+   viewer, for example by pressing a button.
 4. Only look-only requests may be sent automatically, refreshed on a timer, or kept for reuse.
 5. A command may name requests only on its own network.
 6. A form sends its fields as one map argument. Values are byte strings, numbers and true/false only. The
    function must treat them as untrusted input.
-7. A refusal, a failed function and a timeout look the same to the client. The browser must show one message,
+7. A refusal, a failed function and a timeout look the same to the client. The viewer must show one message,
    "could not be fetched", in the region that was waiting. A function that ran and wants to report a problem does so
    by returning display commands.
-8. Whether connection reuse is needed is decided after the trial in section 14. Until then the browser must work
+8. Whether connection reuse is needed is decided after the trial in section 14. Until then the viewer must work
    with one request per connection.
-9. The browser must slow down by itself when it is refused, and must not exceed the limits in section 11.
-10. The `call` frame must carry the arguments the browser sends: byte strings (text), whole numbers, true/false,
+9. The viewer must slow down by itself when it is refused, and must not exceed the limits in section 11.
+10. The `call` frame must carry the arguments the viewer sends: byte strings (text), whole numbers, true/false,
     and one map (the form of requirement 5.6). The Swift `callFrame` today takes whole numbers only
     (`args: [Int64]`) and must be updated, in `project-bees`, to carry these. The Silica client's frame builder and
     the bridge's reading of arguments must be checked to agree, with the BEES conformance goldens extended to
     cover them.
-11. Mark query (ruled 2026-11-24, OI-3). Before sending a request that came from an outside link, the browser first
+11. Mark query (ruled 2026-11-24, OI-3). Before sending a request that came from an outside link, the viewer first
     asks the bridge for the mark of the name and sends the real request only if the answer is look-only. If the
-    bridge's answer is does-something, is missing, or cannot be read, the browser refuses the link and says why. The
+    bridge's answer is does-something, is missing, or cannot be read, the viewer refuses the link and says why. The
     query is one request and counts against the person's allowance. The bridge answers it from the decision of its
     TRUST node. The query's form is to be defined on the BEES side.
 
@@ -136,7 +136,7 @@ the new native application, not a web browser.
 1. A reply is a list of commands, carried out in the order given.
 2. A command is a map with one key that says which command it is, plus its values. Each command has a stated set of
    keys. A new optional key may be added without breaking an old reader.
-3. Names of commands and keys come from a fixed list with a version number, known to the browser and to every
+3. Names of commands and keys come from a fixed list with a version number, known to the viewer and to every
    program that builds or checks a reply. Everything an author supplies (text, region names, field names, addresses)
    is a byte string.
 4. A reply states the vocabulary version it uses. The vocabulary, its version and the conformance set (section 14.1)
@@ -158,19 +158,19 @@ the new native application, not a web browser.
    address; send a request again after a time (section 9). A `cast` request is not in version 1.
 8. Not in version 1: audio, video, a subscription, stored values, and anything that acts on the person's machine
    (copy to clipboard, save a file, notification, launching another application).
-9. Appearance: commands say what a thing is. The browser alone chooses fonts, colours and layout and follows the
+9. Appearance: commands say what a thing is. The viewer alone chooses fonts, colours and layout and follows the
    system's light and dark settings. A few hints (important, warning, success) are planned for a later version
    and are not part of version 1.
 
 ### 6.1 Checking a reply
 
-1. Before anything is drawn or carried out, the browser must decode the reply with bounds applied during decoding
+1. Before anything is drawn or carried out, the viewer must decode the reply with bounds applied during decoding
    and check every command against the vocabulary and the limits in section 11. Terms that are not data (process
    identifiers, functions, references) must be refused.
 2. A reply that fails is refused whole.
 3. Unknown things:
-   - an unknown action command, or a reply whose version is newer than the browser's: refuse the whole reply and
-     tell the person the page needs a newer browser;
+   - an unknown action command, or a reply whose version is newer than the viewer's: refuse the whole reply and
+     tell the person the page needs a newer viewer;
    - an unknown display command: use the fallback the author supplied, otherwise skip it with a visible note that
      something was left out.
 4. A command that lacks required accessibility information (section 10) is refused or shown with a visible mark.
@@ -183,8 +183,8 @@ the new native application, not a web browser.
    shows "could not be fetched" with a "try again" control.
 4. There is no automatic retry of a failed region.
 5. When two replies target one region, the reply to the latest request wins.
-6. The browser keeps the current display and its named regions. Commands act on that state. It lasts until the
-   browser goes to another address in that tab.
+6. The viewer keeps the current display and its named regions. Commands act on that state. It lasts until the
+   viewer goes to another address in that tab.
 7. The number of automatic requests for one render and the number of parts loading at once are bounded
    (section 11).
 
@@ -192,13 +192,13 @@ the new native application, not a web browser.
 
 1. An image has a required text description.
 2. An image larger than one frame is requested in parts: a stated range of a named object, repeated until complete.
-3. A total size cap applies. Above it the browser shows a "too large" mark instead of the image.
+3. A total size cap applies. Above it the viewer shows a "too large" mark instead of the image.
 4. The size of one part waits for the timing trial (section 14).
 
 ## 9. Timed refresh
 
-1. A command may ask the browser to send a stated look-only request again for a region after a stated time.
-2. The browser enforces a minimum interval (section 11).
+1. A command may ask the viewer to send a stated look-only request again for a region after a stated time.
+2. The viewer enforces a minimum interval (section 11).
 3. A region that contains a field the person has edited must never be refreshed.
 4. Each refresh is a request and counts against the person's allowance at the bridge.
 
@@ -207,7 +207,7 @@ the new native application, not a web browser.
 1. An image without a text description, and a form field without a label, are refused or shown with a visible mark.
 2. A render states its language.
 3. Commands map to the standard SwiftUI controls (which are macOS controls underneath) so that VoiceOver, keyboard navigation, dark mode and system text
-   size work without effort from the author. The browser must pass the text descriptions and labels to the
+   size work without effort from the author. The viewer must pass the text descriptions and labels to the
    operating system's accessibility interface.
 4. The person must be able to select and copy displayed text with the standard macOS shortcut. This is a feature
    of the text controls and is not a command.
@@ -227,18 +227,18 @@ Every limit in this table must be a configuration value, not a constant in the c
 | Parts loading at once per tab | 4 |
 | Default port | 481 |
 
-The browser must check these against the configuration at the point of use. There is no limit on the number of tabs for now (ruled 2026-11-24). Section 15 lists limits not yet given values
+The viewer must check these against the configuration at the point of use. There is no limit on the number of tabs for now (ruled 2026-11-24). Section 15 lists limits not yet given values
 (requests per interval).
 
 ## 12. Keeping, history and tabs
 
 1. A reply may be kept only if it holds display commands only, only for the time its commands state, and only for a
    look-only request. With no statement, nothing is kept. A kept copy never re-runs an action.
-2. When the network cannot be reached, the browser may show a kept copy, clearly marked as old.
+2. When the network cannot be reached, the viewer may show a kept copy, clearly marked as old.
 3. Each tab has its own display, history and regions. History offers Back and Forward. Back uses a kept copy where
    one is allowed and otherwise asks the node again. A form is not restored. An action is never repeated by going
    back.
-4. Version 1 has tabs. All tabs on one network share one key and one allowance at the bridge, so the browser must
+4. Version 1 has tabs. All tabs on one network share one key and one allowance at the bridge, so the viewer must
    count requests across tabs and slow down together.
 5. There are no stored values in version 1 (no cookie-like feature). A node identifies the person by their key.
 
@@ -246,7 +246,7 @@ The browser must check these against the configuration at the point of use. Ther
 
 1. The window always shows the name the person gave the network and the host.
 2. A details panel shows the fingerprint of the network's producer key.
-3. The browser does not show which bridge answered, because the host names one bridge.
+3. The viewer does not show which bridge answered, because the host names one bridge.
 4. Pass expiry (section 4) is visible in the network list.
 
 ### 13.1 Application shell (ruled 2026-11-24)
@@ -273,7 +273,7 @@ The exact menus and shortcut keys are still to be written down.
    the commands and prints what it would display and do. It also measures the time of real requests, one at a time
    and several in turn, and of image parts. Its numbers decide connection reuse (section 5.8) and the part size
    (section 8.4).
-5. **Test network.** The browser, the command-line trial and the window checks run against a test network built
+5. **Test network.** The viewer, the command-line trial and the window checks run against a test network built
    from BEES and the Silica compiler: one bridge, several TRUST nodes and several TEMPUS nodes. The TRUST nodes
    export the functions that return commands, and one of them decides each published name's mark (requirement
    5.2). The bridge's configuration is compiled in for now, as BEES does today, so changing a token, a whitelist
@@ -288,12 +288,12 @@ These were not ruled and must be decided before or during the build.
 - OI-1. RULED 2026-11-24: the default port is 481 (requirement 3.7).
 - OI-2. (Narrowed 2026-11-24.) The first network to test against is the test network of requirement 14.5. A real
   network is still open.
-- OI-3. RULED 2026-11-24: the bridge sends the mark, a non-bridge TRUST node decides it, and the browser asks the
+- OI-3. RULED 2026-11-24: the bridge sends the mark, a non-bridge TRUST node decides it, and the viewer asks the
   bridge first (requirement 5.11). The options considered were: ask the bridge first (chosen), a list read when a
   network is added, and the bridge refusing by itself. Still to be defined on the BEES side: the form of the query.
 - OI-4. RULED 2026-11-24 (changed the same day): no cap on tabs for now. The earlier cap of 8 is removed. All tabs on one
   network still share one allowance at the bridge (requirement 12.4), and with no cap that shared counting and the
-  browser's own slowing down are the only protection. A cap may be added if the timing trial shows the bridge's
+  viewer's own slowing down are the only protection. A cap may be added if the timing trial shows the bridge's
   limits are reached by ordinary use. The bridge's limits were designed for programs, not people clicking.
 - OI-5. Whether the bridge may keep a connection open for several calls from one admitted peer. Decided after the
   trial in section 14.4.
