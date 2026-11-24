@@ -310,6 +310,11 @@ These were not ruled and must be decided before or during the build.
   limits are reached by ordinary use. The bridge's limits were designed for programs, not people clicking.
 - OI-5. Whether the bridge may keep a connection open for several calls from one admitted peer. Decided after the
   trial in section 14.4.
+  Measured 2026-11-24 (testnet/README.md "Timing trial", testnet/results/timing-20261124.md; loopback, not a ruling): a full
+  request is about 11 ms, of which connect + TLS + admission is 4.3 ms (38 percent; it is CPU); the call itself is the rest.
+  The client waits 5 round trips before it can send the call (TCP 1, TLS 1, admission 3) and 1 more for the call, so on a real path
+  one call per connection costs 6 round trips against 1 with reuse (at 100 ms RTT: 600 ms against 100 ms). The measured advice is to
+  allow reuse; the owner decides. The bridge as built also refuses at 3 or more connections at once.
 - OI-6. (Narrowed 2026-11-24: passes are BEES's test-only ones for now, and no issuing tool is built.) Still open:
   the format for importing a network and a pass. RULED 2026-11-24: a file in ETF, with no private key (requirement
   4.2). A pasteable code may be added later. The exact layout of the term is still to be written down.
@@ -366,8 +371,12 @@ These were not ruled and must be decided before or during the build.
   shortcut keys, the window layout, and the tests for the Swift C interface.
 - OI-8. SETTLED 2026-11-24: the scheme is `tempus` and is the only link type allowed.
 - OI-9. The total image cap of 5 MB is accepted as a configurable starting value. The size of the part waits for the
-  timing trial The test network shows that the largest
+  timing trial. The test network shows that the largest
   part that fits one frame is about 131000 bytes, not 131072.
+  Measured 2026-11-24 (testnet/README.md "Timing trial"; loopback, not a ruling): a request costs about 11 ms fixed and about
+  0.1 ms per KB more; a 16 KB part takes 13.4 ms, 65 KB 18.2 ms, 131000 B 25.7 ms; the 234 KB image takes 49 ms in 2 parts. The
+  measured advice is to keep 131000 bytes as the default and to fetch parts one or two at a time, because the bridge as built
+  refuses at 3 or more connections at once; the owner decides.
 - OI-10. RULED 2026-11-24: they live in this project (requirement 6.4).
 
 ## 16. Dependencies on other work

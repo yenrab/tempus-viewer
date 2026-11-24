@@ -113,8 +113,7 @@ Topology (ports are provisional; the bridge's TEMPUS port is the default, 481):
 | `authority` | TRUST | decides each name's mark (`look_only` or `does_something`) and runs `restart_node` |
 | `sentinel`, `edge1`, `edge2`, `edge3` | TEMPUS | a gossip network around the bridge, so the viewer talks to a real network (ports 24430 to 24433, see Stage 3) |
 
-Steps, each with a trial and a golden as BEES does (steps 1 to 4 are done, and the script of step 5; the command-line timing
-trial of step 5 remains):
+Steps, each with a trial and a golden as BEES does (steps 1 to 4 are done, and step 5):
 
 1. Generate Silica for the replies: one typed vocabulary type (a sum of tagged tuples) and one builder per reply, with
    the large tables built from the same seeded generator in Silica (not literals), and a check that a node's reply bytes
@@ -123,7 +122,7 @@ trial of step 5 remains):
    reference.
 3. Add `content`, `data` and `authority`, the routing in the bridge, and the mark query (requirement 5.11).
 4. Add the TEMPUS nodes. Done (Stage 3).
-5. A script that starts the whole network and stops it (done: `network.sh`), and a trial that runs the command-line timing test against it (open).
+5. A script that starts the whole network and stops it (done: `network.sh`), and the command-line timing trial (done: `nodes/client/timing_trial.py`, see Timing trial).
 
 ## Stage 3: the TEMPUS nodes, and one script for the whole network
 
@@ -195,3 +194,76 @@ stopped, no process and no port left.
   (`protocol_error`).
 - **A sentinel puts every peer that asks it for a sample into its store of that peer's type.** The checks therefore ask it as a
   bridge-typed client (`x4`), so its edge store holds exactly the three edges.
+
+## Timing trial
+
+    testnet/nodes/client/timing_trial.py        (BEES_ROOT from testnet/.bees_root; starts the network, measures, stops it)
+
+It writes `testnet/results/timing-YYYYMMDD.md` (machine, commit ids of this repository, the BEES clone and the Silica clone, every table
+and what the viewer would show for each reply). It uses BEES's Python client unchanged for the credentials and the frames, and a thin
+copy of BEES's `dial()` and `_admit()` with a clock between the steps, because BEES's client exposes no phases (BEES is not edited;
+`dial()` itself is also timed to show the copy costs the same). Measurable: TCP connect, TLS handshake, admission (three frame
+exchanges), request to reply, and the client's close. Not measurable from outside: the bridge's own time inside "request to reply"
+(it includes the bridge's onward TRUST call and the TRUST node's work), and the key exchange group (Python's `ssl` does not report it).
+Every reply was also checked as the viewer would (ETF decode, tagged tuple of one map, known tag, section 11 limits) and equals its
+reference bytes: no problem found. Numbers of the run of 2026-11-24 (Apple M1 Max, loopback, 30 requests per row, milliseconds, medians):
+
+| Request (new connection each) | frame bytes | full | p95 | of which tcp + tls + admission | request to reply |
+|---|---|---|---|---|---|
+| `home` | 1210 | 11.4 | 12.8 | 4.3 (0.2 + 2.2 + 2.0) | 6.9 |
+| `nodes_table` (medium) | 2990 | 12.1 | 32.0 | 4.4 | 7.5 |
+| `samples` page 1, 100 rows | 6017 | 11.9 | 32.2 | 4.3 | 7.5 |
+| image part 16384 B | 16437 | 13.4 | 14.9 | 4.5 | 9.0 |
+| image part 65536 B | 65589 | 18.2 | 29.4 | 4.4 | 13.8 |
+| image part 131000 B | 131053 | 25.7 | 45.5 | 4.5 | 21.1 |
+| the 234 KB image, 2 parts in sequence | 234174 | 48.9 | 69.4 | 9.2 | 39.0 |
+| `viewer:mark` (stand-in) | | 11.6 | 12.5 | | 7.0 |
+
+Screens (sequential / parallel with 4 at once, median): home frame + status 25.8 / 25.7; nodes frame + 2 regions + one node 64.2 / 54.9;
+gallery frame + 4 image parts 87.0 / 80.1. The p95 values of 22 to 33 ms in some rows are single stalls of about 20 ms (a delayed
+acknowledgement or a scheduling stall; not explained).
+
+**What was learned.**
+
+1. **Fixed cost per request is about 11 ms and the bytes add about 0.1 ms per KB.** A reply of 166 bytes and one of 6017 bytes cost the
+   same; a 131 KB part costs 14 ms more than a small one (about 9 MB/s through the bridge, much slower than loopback could carry). The
+   size of the reply, up to a few KB, is not what the viewer waits for.
+2. **Concurrency does not buy throughput here.** One connection at a time gives 72 requests a second, 2 at once 73, 3 at once 84, 4 at
+   once 80, with the bridge as it is configured. Parallel screens gain 0 to 15 percent.
+3. **The bridge refuses at 3 or more connections at once.** With 2 at once nothing is refused (48 of 48). With 3 at once 7 of 48 got
+   no reply (closed after admission), with 4 5 of 48, with 6 and 8 most connections were closed at the start of admission (35 and
+   40 of 48). So the viewer's "4 parts at once per tab" (section 11) would hit the limits of this bridge (`pin 2`, `tin 4`, `max 4` in
+   `nodes/bridge/bridge.role.in`; which one acts where is not shown by the refusals, which look the same). Requests one after another,
+   back to back, were never refused (the 0.12 s pause in `run_all.py` is not needed for that).
+
+**OI-5, connection reuse.** The bridge answers one `call` per connection, so every request pays tcp + TLS + admission. On loopback
+that is 4.3 ms of 11.4 ms (38 percent, 18 percent for a large image part): the cost is CPU (key exchange with X25519MLKEM768, two
+signatures, the token and the proof of possession), and it is small. What loopback hides is round trips. Before the first request byte
+the client needs 1 round trip for TCP, 1 for the TLS 1.3 handshake, and the admission is three exchanges the client waits for one after
+the other (advert, challenge, response), so 5 round trips, plus 1 for the call: 6 round trips per request, against 1 on a connection
+that is already admitted. Counting round trips (the CPU part, 4 to 5 ms, is added to each): at 20 ms RTT, 120 ms per request against 20; at
+50 ms, 300 ms against 50; at 100 ms, 600 ms against 100. A screen of a frame and 3 regions fetched one after the other is then 2.4 s
+at 100 ms RTT without reuse and 0.4 s with it (before any CPU). The larger ClientHello of the post-quantum group (about 1.2 KB of key
+share each way) adds bytes, not round trips, on ordinary paths. **Recommendation (the owner rules): yes, allow reuse** of an admitted
+connection for several calls in series, with the bridge free to close it after an idle time and a number of calls, and the viewer
+keeping one connection per network (a second only when the bridge allows it). On a short path (under about 5 ms RTT) the gain is small
+and one call per connection would be tolerable; for the networks a person reaches over the internet it is the largest single
+saving available. It needs a change on the BEES side (a bridge that reads a next call from an admitted connection) and the viewer's
+retry of a call after a connection the bridge closed. Pipelining several calls on one connection was not measured and is not assumed.
+If reuse is refused, the viewer should ask for fewer, larger replies (one frame carrying what several regions would), because
+each extra request costs 6 round trips.
+
+**OI-9, size of one part.** With a fixed cost of about 11 ms per request and 0.1 ms per KB, a 234 KB image takes 49 ms in 2 parts of up
+to 131000 bytes, and would take about 15 parts at 16 KB, each 13.4 ms, about 200 ms in series (loopback; the multiple of round trips
+described above is added per part when each part has its own connection, and per part when connections are reused and the parts are
+fetched in series). Larger is better until memory, progress display and the refusal at 3 or more connections matter: **recommendation
+(the owner rules): keep the part size at the largest that fits a frame, 131000 bytes, as the configurable default**, and let the viewer
+fetch the next part as soon as one arrives, one or two at a time, not four, until the bridge's in-flight limit is known. The viewer
+should not hold a smaller part size for the sake of speed; a smaller one only gives earlier first pixels, which the 5 MB cap and the
+described timing do not need.
+
+**Caveats.** One machine, loopback (RTT about 0.05 ms), client and nodes share cores (load average 3 at the start); the client is
+Python with OpenSSL 3.6.2, the nodes are Silica programs with OpenSSL 4.x, a Swift client will differ. The nodes run with BEES's test
+unit and the limits in `bridge.role.in` (`rate 100000` an hour, not a real setting), so section 3's refusals describe this bridge, not
+a production one. Debug and release builds of the nodes were not compared (the build is the release compiler's). X25519MLKEM768 is
+expected, not observed. The bridge's own latency cannot be split from the onward TRUST call.
